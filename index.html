@@ -1,0 +1,2912 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<title>Suara Terakhir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="adegan.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0f14; --panel:#151922; --ink:#e9e6df; --muted:#8a8f9c;
+  --ok:#7fd18b; --bad:#ff6b6b; --accent:#f2c14e; --water:#2a4f6e;
+  --raised:#1b202b; --line:rgba(233,230,223,.09); --line2:rgba(233,230,223,.16); --ink2:#b5b9c4;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+/* ---------- HUD ---------- */
+#hud{display:flex;gap:16px 32px;align-items:center;min-height:56px;padding:8px 24px;font-size:12px;color:var(--muted);background:#0a0c10;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+#hud b{color:var(--ink)}
+.meter{flex:1;max-width:220px;height:6px;background:rgba(233,230,223,.08);border-radius:3px;overflow:hidden}
+.meter i{display:block;height:100%;width:50%;background:var(--accent);transition:width .6s}
+.meter.elite i{background:#d0563f;width:0}
+.hx{display:flex;align-items:center;gap:10px;flex:0 1 auto;min-width:0}
+/* chapter: a small accent chip, then the chapter title */
+#chap{display:flex;align-items:center;gap:10px;min-width:0;margin-right:auto;font-size:14px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#chap b{flex:none;font-size:12px;font-weight:600;line-height:18px;padding:3px 8px;border-radius:6px;color:var(--accent);background:rgba(242,193,78,.14)}
+#trustNum b,#eliteNum,#promNum{font:500 13px/16px "JetBrains Mono",ui-monospace,monospace;color:var(--ink)}
+/* only the bars shrink; labels and numbers never overlap */
+.hx > :not(.meter){flex:none}
+#hud .hx .meter{flex:0 1 auto;width:160px;min-width:40px}
+#hud #eliteBox .meter{width:120px}
+.hl{white-space:nowrap}
+.hl .short{display:none}
+/* narrow screens: chapter and buttons on the first row, the meters share the second row */
+@media (max-width:1180px){
+  #hud{gap:8px 12px;padding:8px 12px;flex-wrap:wrap;font-size:12px}
+  #hud::after{content:"";flex-basis:100%;order:3}
+  #chap{flex:1 1 0}
+  #muteBtn{order:1}#resetBtn{order:2}
+  .hx,#eliteBox{order:4;flex:1 1 0}#promBox{flex:none}
+  #hud .hx .meter,#eliteBox .meter{width:auto;flex:1;min-width:28px}
+}
+@media (max-width:600px){.hl .long{display:none}.hl .short{display:inline}}
+#hud button{font-size:12px;min-height:32px;padding:0 12px;border-color:var(--line2);color:var(--ink2);transition:background-color .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease)}
+#hud button:hover{background:var(--raised);border-color:rgba(233,230,223,.28);color:var(--ink)}
+/* speaker icon: waves when on, a cross when muted */
+#hud #muteBtn,#hud #resetBtn{display:inline-flex;align-items:center;justify-content:center;padding:0;width:36px;min-height:36px}
+/* restarting is destructive, so its button stays quieter than mute */
+#hud #resetBtn{border-color:var(--line);color:var(--muted)}
+#resetBtn svg{fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+#muteBtn svg{fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+#muteBtn .spk{fill:currentColor}
+#muteBtn .off,#muteBtn.muted .wave{display:none}
+#muteBtn.muted .off{display:inline}
+#muteBtn.muted{color:var(--muted)}
+#resetBtn:hover{border-color:var(--bad);color:var(--bad);background:transparent}
+
+/* ---------- 2.5D scene ---------- */
+#scene{position:relative;flex:0 0 52%;overflow:hidden;perspective:900px;perspective-origin:50% 40%}
+#world{position:absolute;inset:0;transform-style:preserve-3d;transition:transform 1.2s ease}
+#world.zoom{transform:translateZ(90px) translateY(8px)}
+/* the cursor camera turns this wrapper, so #world keeps its own zoom and menu drift */
+#cam{position:absolute;inset:0;transform-style:preserve-3d}
+/* a walking figure bobs its head and body while it crosses the stage */
+.p.walking .b,.p.walking .h{animation:step .26s ease-in-out infinite alternate}
+.p.walking .h{animation-delay:-.13s}
+@keyframes step{to{translate:0 -3px}}
+/* every stage stands on a line above the dialogue lower third, so the characters fill the upper part of the scene
+   instead of hiding behind the subtitle; ground layers reach past that line down to the bottom edge */
+.stage{position:absolute;top:0;left:0;right:0;bottom:clamp(22%,170px,34%);transform-style:preserve-3d;display:none}
+#scene.hall #stHall,#scene.flood #stFlood{display:block}
+#scene.hall{background:linear-gradient(#2a1f16,#4a3624 70%,#3a2a1c)}
+#scene.lightning{filter:brightness(1.9)}
+.abs{position:absolute}
+
+/* people */
+.p{position:absolute;width:34px;transform-origin:bottom center}
+/* a soft contact shadow grounds each figure */
+.p::before{content:"";position:absolute;left:-12%;right:-12%;bottom:-4px;height:9px;border-radius:50%;background:rgba(0,0,0,.32);z-index:-1}
+.p .h{width:22px;height:22px;border-radius:50%;margin:0 auto;background:var(--skin,#c99a74)}
+.p .b{width:34px;height:44px;border-radius:12px 12px 3px 3px;margin-top:2px;background:var(--c,#2b2f3a)}
+.p.back .h{background:#17110d}.p.back .b{background:#0f0b09}
+.p.seat .b{height:30px}
+.p .u{position:absolute;top:-20px;left:-16px;width:66px;height:30px;border-radius:66px 66px 0 0;background:var(--uc,#7a2d2d)}
+.p .u::after{content:"";position:absolute;left:32px;top:28px;width:2px;height:26px;background:#222}
+.p .cam{position:absolute;top:4px;left:18px;width:28px;height:17px;background:#1c1c1c;border-radius:3px}
+.p .cam::after{content:"";position:absolute;right:-7px;top:3px;width:11px;height:11px;border-radius:50%;background:#444;box-shadow:0 0 0 2px #1c1c1c}
+.p .mc{position:absolute;top:30px;left:-12px;width:20px;height:4px;background:#222}
+.p .mc::before{content:"";position:absolute;left:-6px;top:-3px;width:9px;height:9px;border-radius:50%;background:#555}
+.p .tag{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:11px;white-space:nowrap;color:var(--muted)}
+.p.talk{animation:talk .35s ease-in-out 3}
+.p .tag{transition:color .2s var(--ease)}
+.p.speaking .tag{color:var(--accent);font-weight:600}
+@keyframes talk{50%{margin-bottom:5px}}
+.p.hero{width:46px}
+.p.hero .h{width:30px;height:30px}.p.hero .b{width:46px;height:80px;border-radius:14px 14px 4px 4px}
+
+/* shared scene props. Each stage sets --rim, the colour of its key light, which lands on one side of every figure */
+.p .h{box-shadow:inset 0 2px 4px rgba(255,224,178,.32),inset -2px -2px 4px rgba(18,12,9,.5),inset var(--rimx,5px) 0 0 var(--rim,transparent)}
+.p .b{box-shadow:inset 0 2px 5px rgba(255,218,165,.2),inset -3px 0 6px rgba(0,0,0,.42),inset var(--rimx,5px) 0 0 var(--rim,transparent)}
+.p.back .h,.p.back .b{box-shadow:inset var(--rimx,5px) 0 0 var(--rim,transparent)}
+/* formal scenes: a shirt collar and a maroon tie on everyone who faces us */
+:is(#stHall,#stSidang,#stTV,#stSiaran) .p:not(.back) .b::before{content:"";position:absolute;top:0;left:50%;width:9px;height:14px;margin-left:-4.5px;background:#e9dcbd;clip-path:polygon(0 0,100% 0,50% 100%)}
+:is(#stHall,#stSidang,#stTV,#stSiaran) .p:not(.back) .b::after{content:"";position:absolute;top:5px;left:50%;width:4px;height:18px;margin-left:-2px;border-radius:1px;background:var(--tie,#7a1f1f)}
+:is(#stHall,#stSidang,#stTV,#stSiaran) .p:not(.back):has(.cam) .b::after{display:none}
+.p .b{position:relative}
+.p .h{position:relative}
+.p.peci .h::before{content:"";position:absolute;top:-4px;left:1px;right:1px;height:9px;border-radius:3px 3px 1px 1px;background:#141519;box-shadow:inset 0 1px 1px rgba(255,224,178,.25)}
+.p.hijab .h::before{content:"";position:absolute;inset:-3px -3px -6px;border-radius:50% 50% 42% 42%;border:4px solid var(--hj,#3a4a5a);border-bottom-width:7px}
+/* a dark vignette around every scene keeps the eye on the middle */
+#vig{position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse 75% 70% at 50% 42%,transparent 55%,rgba(4,5,8,.55))}
+/* standing fan, the kind in every government office: the grille turns slowly */
+.kipas{width:46px;height:120px}
+.kipas::before{content:"";position:absolute;left:21px;top:40px;width:4px;bottom:6px;background:#2a2622}
+.kipas::after{content:"";position:absolute;left:9px;right:9px;bottom:0;height:7px;border-radius:50%;background:#2a2622}
+.kipas i{position:absolute;left:0;top:0;width:46px;height:46px;border-radius:50%;border:3px solid #3a3530;
+  background:repeating-conic-gradient(#4a443d 0 12deg,#2e2a25 12deg 30deg);animation:kipas 4s linear infinite}
+@keyframes kipas{to{rotate:360deg}}
+/* a soft cone of light from a lamp above, tinted by --lc */
+.cone{width:var(--cw,140px);height:var(--ch,60%);background:linear-gradient(var(--lc,rgba(255,215,150,.22)),transparent 90%);
+  clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);filter:blur(3px);pointer-events:none}
+
+/* hall: tall windows with cool morning light at the back, warm sconces on teak panels, maroon curtains and the
+   Sendaru emblem, a maroon carpet up to the podium, and a railing with a standing fan in front */
+/* hall (Prolog): dusk windows, a teak wall with the state emblem, red curtains framing the stage, one spotlight on the podium */
+#stHall{--rim:rgba(255,205,140,.2)}
+.hl-sky{left:-30%;right:-30%;top:-40%;bottom:-20%;background:linear-gradient(#18212e,#263447 52%,#1b2330)}
+.hl-ribs{left:-30%;right:-30%;top:-40%;height:40%;background:repeating-linear-gradient(90deg,rgba(12,16,23,.62) 0 18px,rgba(46,58,76,.22) 18px 70px)}
+.hl-win{top:0;width:9%;height:66%;border-radius:999px 999px 2px 2px;background:linear-gradient(#263447,#38495f 54%,#4a5b70);border:3px solid rgba(16,21,29,.76);box-shadow:inset 0 10px 24px rgba(198,216,240,.16),0 0 22px rgba(58,75,98,.2);overflow:hidden}
+.hl-win::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 48.5%,rgba(18,24,33,.56) 48.5% 51.5%,transparent 51.5%),repeating-linear-gradient(180deg,transparent 0 24%,rgba(18,24,33,.45) 24% 26%)}
+.hl-win::after{content:"";position:absolute;left:0;right:0;bottom:0;height:22%;background:linear-gradient(rgba(42,54,70,.35),rgba(28,37,49,.75))}
+.hl-wall{left:13%;right:13%;top:-14%;bottom:4%;background:repeating-linear-gradient(90deg,rgba(255,224,185,.03) 0 2px,transparent 2px 28px),linear-gradient(#2b1d14,#19100b 78%,#110b08);border-inline:2px solid #100a07;box-shadow:0 14px 42px rgba(0,0,0,.74)}
+.hl-pil{top:0;bottom:0;width:26px;background:linear-gradient(90deg,#150d09,#312017 48%,#170f0b);border-left:1px solid rgba(184,148,70,.16)}
+.hl-emblem{left:50%;top:-2%;width:84px;height:92px;margin-left:-42px;display:grid;place-items:center}
+.hl-emblem::before{content:"";position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(255,206,134,.26),transparent 72%)}
+.hl-emblem .ray{position:absolute;width:70px;height:70px;border-radius:50%;background:repeating-conic-gradient(rgba(184,148,70,.36) 0 8deg,transparent 8deg 22.5deg)}
+.hl-emblem .wr{position:absolute;width:80px;height:68px;border-radius:50%;border:3px dashed rgba(184,148,70,.85);border-top-color:transparent}
+.hl-emblem .sh{position:relative;width:46px;height:54px;display:grid;place-items:center;background:linear-gradient(160deg,#962828,#561414);border:2px solid #b89446;border-radius:4px 4px 23px 23px;box-shadow:0 3px 10px rgba(0,0,0,.68)}
+.hl-emblem .sh::after{content:"";width:13px;height:13px;background:#b89446;rotate:45deg;box-shadow:0 0 0 2px rgba(36,24,18,.72)}
+.hl-emblem .sc{position:absolute;bottom:0;width:70px;height:10px;background:#e9dcbd;border:1px solid #735929;border-radius:2px}
+.hl-foto{top:10%;width:36px;height:46px;background:#161210;border:3px solid #735929;box-shadow:0 4px 10px rgba(0,0,0,.66);overflow:hidden}
+.hl-foto::before{content:"";position:absolute;top:9px;left:50%;margin-left:-5px;width:11px;height:11px;border-radius:50%;background:#3d332c}
+.hl-foto::after{content:"";position:absolute;bottom:-2px;left:50%;margin-left:-12px;width:24px;height:17px;border-radius:9px 9px 0 0;background:#2c241e}
+.hl-sconce{top:24%;width:10px;height:13px;border-radius:5px 5px 2px 2px;background:#e8a35a;border-bottom:4px solid #b89446;box-shadow:0 0 12px rgba(232,163,90,.9),0 0 28px rgba(232,163,90,.45)}
+.hl-sconce::after{content:"";position:absolute;left:50%;top:10px;width:110px;height:170px;margin-left:-55px;background:radial-gradient(ellipse at 50% 0,rgba(232,163,90,.26),rgba(232,163,90,.08) 56%,transparent 80%);clip-path:polygon(42% 0,58% 0,100% 100%,0 100%)}
+.hl-curtain{top:-18%;bottom:-4%;width:17%;background:repeating-linear-gradient(90deg,#591515 0,#7a1f1f 9px,#440f0f 18px);box-shadow:0 10px 28px rgba(0,0,0,.72)}
+.hl-curtain.l{left:-3%;clip-path:polygon(0 0,100% 0,100% 34%,52% 60%,64% 100%,0 100%)}
+.hl-curtain.r{right:-3%;clip-path:polygon(0 0,100% 0,100% 100%,36% 100%,48% 60%,0 34%)}
+.hl-tie{top:57%;width:5%;height:9px;border-radius:4px;background:linear-gradient(#d2ae5c,#8a6a2a)}
+.hl-rod{left:-8%;right:-8%;top:-18%;height:9px;border-radius:5px;background:linear-gradient(#e0bd6a,#8a6a2a);box-shadow:0 3px 8px rgba(0,0,0,.6)}
+.hl-flag{bottom:4%;width:28px;height:170px}
+.hl-flag::before{content:"";position:absolute;left:12px;bottom:0;top:0;width:4px;background:linear-gradient(90deg,#5e4720,#c8a252,#5e4720)}
+.hl-flag::after{content:"";position:absolute;left:9px;top:-6px;width:10px;height:10px;background:#b89446;rotate:45deg}
+.hl-flag i{position:absolute;top:10px;left:2px;width:24px;height:86px;background:linear-gradient(90deg,#7a1f1f 52%,#dfd3b8 52%);border-radius:2px 2px 6px 6px;box-shadow:inset -3px 0 6px rgba(0,0,0,.45)}
+.hl-floor{left:-30%;right:-30%;bottom:-70%;height:76%;background:linear-gradient(#231710,#140d09 56%,#0c0806);border-top:2px solid #3b281c}
+.hl-carpet{left:50%;bottom:-70%;width:62%;margin-left:-31%;height:76%;background:linear-gradient(#5a1515,#390c0c);border-inline:3px solid rgba(184,148,70,.4);clip-path:polygon(14% 0,86% 0,100% 100%,0 100%)}
+.hl-dais{left:8%;right:8%;bottom:3%;height:16px;background:linear-gradient(#322117,#1c120c);border-top:1px solid rgba(255,214,150,.18);box-shadow:0 6px 16px rgba(0,0,0,.65)}
+.hl-spot{left:50%;top:-30%;width:380px;height:132%;margin-left:-190px;pointer-events:none;background:radial-gradient(ellipse at 50% 12%,rgba(255,216,158,.26),rgba(255,204,138,.09) 48%,transparent 76%);clip-path:polygon(36% 0,64% 0,96% 100%,4% 100%)}
+.hl-pool{left:50%;bottom:-2%;width:280px;height:34px;margin-left:-140px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,208,142,.24),rgba(255,192,112,.06) 55%,transparent 78%)}
+.hl-podium{left:50%;bottom:3%;width:100px;height:72px;margin-left:-50px;display:grid;place-items:center;background:linear-gradient(#3b271c,#241710 55%,#170e0a);border-top:4px solid #b89446;border-left:1px solid rgba(255,218,165,.2);border-radius:3px 3px 1px 1px;box-shadow:0 10px 24px rgba(0,0,0,.82)}
+.hl-podium::before{content:"";position:absolute;top:-30px;left:50%;width:90px;height:34px;margin-left:-45px;background:radial-gradient(ellipse at 50% 100%,rgba(255,214,150,.36),transparent 75%)}
+.hl-podium b{width:66%;height:50%;display:grid;place-items:center;background:#5a1515;border:1px solid #b89446;border-radius:2px;box-shadow:inset 0 1px 4px rgba(0,0,0,.56)}
+.hl-podium b::after{content:"";width:13px;height:16px;border:1.5px solid #b89446;border-radius:2px 2px 8px 8px}
+.hl-podium i{position:absolute;top:-20px;left:26%;width:2px;height:22px;background:#8e96a4;rotate:18deg}
+.hl-podium i+i{left:auto;right:26%;rotate:-18deg}
+.hl-podium i::before{content:"";position:absolute;top:-5px;left:-3px;width:7px;height:8px;border-radius:3px;background:#3a3f4a;border:1px solid #9aa2b0}
+.hl-rail{left:-30%;right:-30%;bottom:-44%;height:22px;background:#0b0908;border-top:3px solid #1b1410;box-shadow:0 -4px 14px rgba(0,0,0,.65)}
+.hl-boom{right:13%;bottom:-36%;width:70px;height:130px}
+.hl-boom::before{content:"";position:absolute;right:14px;bottom:0;width:3px;height:110px;background:#0d0e12}
+.hl-boom i{position:absolute;top:22px;right:8px;width:70px;height:3px;background:#12141a;rotate:-22deg;transform-origin:right center}
+.hl-boom i::before{content:"";position:absolute;left:-8px;top:-4px;width:14px;height:10px;border-radius:4px;background:#1c1f27;border-left:2px solid #7a1f1f}
+#stHall .p.back .h{background:#14100d;box-shadow:inset 0 3px 4px rgba(255,206,134,.16)}
+#stHall .p.back .b{background:#0e0b09;box-shadow:inset 0 3px 5px rgba(255,206,134,.08)}
+@media (max-width:600px){#stHall .p:not(.back),#stHall .hl-podium{scale:.72;transform-origin:bottom center}#stHall .hl-podium{bottom:3%}}
+.p .buku{position:absolute;top:34px;left:-9px;width:17px;height:22px;background:#7a1f1f;border-left:3px solid #4c1111;border-radius:1px 2px 2px 1px;box-shadow:1px 2px 4px rgba(0,0,0,.5)}
+.p .tally{position:absolute;top:6px;left:26px;width:5px;height:5px;border-radius:50%;background:#e23b3b;box-shadow:0 0 6px 2px rgba(226,59,59,.6)}
+.flash{position:absolute;width:70px;height:70px;border-radius:50%;background:radial-gradient(#fff 0,rgba(255,255,255,.6) 25%,transparent 70%);opacity:0;pointer-events:none}
+.flash.go{animation:flash .35s ease-out}
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
+
+/* flood props: night and reflections. Depth comes from rows that get paler and bluer with distance;
+   the only warm colour is light (windows, lamps, camera lights), and every light leaves a streak on the water */
+#scene.flood{background:linear-gradient(#0d131d,#1a2436 48%,#2c3a52 70%,#33425b)}
+.skyline{left:-12%;right:-12%;bottom:21%;height:64px;background:#24314a;
+  clip-path:polygon(0 100%,0 40%,4% 40%,4% 18%,9% 18%,9% 46%,15% 46%,15% 8%,19% 8%,19% 38%,26% 38%,26% 52%,33% 52%,33% 22%,37% 22%,37% 44%,45% 44%,45% 30%,52% 30%,52% 56%,60% 56%,60% 14%,64% 14%,64% 40%,72% 40%,72% 26%,78% 26%,78% 50%,86% 50%,86% 20%,90% 20%,90% 42%,100% 42%,100% 100%)}
+.skyline i{position:absolute;width:3px;height:4px;background:#e9c27a;opacity:.55}
+.mist{left:-12%;right:-12%;bottom:15%;height:70px;background:linear-gradient(transparent,rgba(120,145,180,.2) 55%,transparent);filter:blur(6px)}
+#stFlood{--rim:rgba(255,200,120,.16)}
+.house{width:90px;height:60px}
+.house .roof{position:absolute;left:-8px;right:-8px;top:0;height:34px;background:var(--rf,#4a2722);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.house .wall{position:absolute;left:6px;right:6px;top:34px;bottom:0;background:var(--wl,#5d6270)}
+.house .win{position:absolute;top:40px;width:12px;height:12px;background:#1b2230}
+.house .win.lit{background:#f2c46e;box-shadow:0 0 14px 4px rgba(242,180,90,.45)}
+.house.far .roof{background:#33405a}.house.far .wall{background:#3c4a63}
+.pole{width:4px;height:150px;background:#151a22}
+.pole::before{content:"";position:absolute;left:-14px;top:12px;width:32px;height:3px;background:#151a22}
+.lamp{position:absolute;left:-10px;top:24px;width:10px;height:6px;border-radius:0 0 5px 5px;background:#ffd28a;box-shadow:0 0 18px 8px rgba(255,190,100,.4),0 0 60px 20px rgba(255,190,100,.12)}
+.wire{height:30px;border-bottom:1.5px solid rgba(10,12,16,.8);border-radius:0 0 50% 50%}
+.water{left:-10%;right:-10%;bottom:-45%;height:71%;overflow:hidden;
+  background:repeating-linear-gradient(transparent 0 9px,rgba(170,200,235,.05) 9px 10px),linear-gradient(#2d4d6b,#1a3048 30%,#0f1e2e)}
+.water::before{content:"";position:absolute;inset:-6px 0 auto 0;height:12px;
+  background:radial-gradient(circle at 10px 12px,transparent 9px,#38597a 10px) 0 0/20px 12px;animation:wave 3s linear infinite}
+.water::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(transparent 0 22px,rgba(255,255,255,.035) 22px 23px);animation:waterdrift 7s linear infinite}
+@keyframes wave{to{background-position:200px 0}}
+@keyframes waterdrift{to{transform:translateY(23px)}}
+/* a light's reflection: a broken vertical streak that shimmers sideways */
+.refl{top:0;width:var(--w,10px);height:var(--h,110px);margin-left:calc(var(--w,10px) / -2);
+  background:repeating-linear-gradient(var(--rc,rgba(242,190,110,.5)) 0 5px,transparent 5px 9px);
+  -webkit-mask:linear-gradient(#000,transparent);mask:linear-gradient(#000,transparent);filter:blur(1.5px);animation:shimmer 2.4s ease-in-out infinite}
+@keyframes shimmer{50%{transform:scaleX(1.6) translateX(1px);opacity:.75}}
+.splash{width:10px;height:3px;border:1px solid rgba(200,225,255,.35);border-radius:50%;opacity:0;animation:splash 1.2s ease-out infinite}
+@keyframes splash{0%{transform:scale(.2);opacity:.9}100%{transform:scale(1.6);opacity:0}}
+.embank{left:-10%;width:52%;bottom:16%;height:7%;background:linear-gradient(#3c3e44,#24262b);clip-path:polygon(0 0,92% 0,100% 100%,0 100%)}
+.embank::after{content:"";position:absolute;inset:0 8% auto 0;height:2px;background:rgba(200,215,235,.18)}
+.log{bottom:12%;width:var(--lw,90px);height:12px;background:#4e3621;border-radius:6px;box-shadow:inset -8px 0 0 #6b4a2b;animation:bob 3s ease-in-out infinite}
+.log.plank{height:7px;border-radius:2px;background:#5a5245;box-shadow:none}
+.log.can{width:22px;height:16px;border-radius:4px;background:#2f5c8a;box-shadow:inset -5px 0 0 #3f72a6}
+@keyframes bob{50%{margin-bottom:4px;rotate:var(--tilt,0deg)}}
+/* people standing in the water: the lower part of the body sinks under a water tint, a ring of ripples sits on
+   the waterline and the body leaves a faint wobbling reflection below it */
+/* flood (Bab 1), night kampung: tiled roofs with warm windows, a pos ronda bulb, one street lamp lighting the rain,
+   a few large figures in the water, sandbags and a flood gauge blurred in the foreground */
+#stFlood .water{background:repeating-linear-gradient(transparent 0 8px,rgba(155,186,220,.05) 8px 9px),linear-gradient(#131d29,#0e1620 26%,#0a1018 65%,#070b11)}
+#stFlood .refl{background:linear-gradient(var(--rc,rgba(238,177,90,.55)),transparent 90%);border-radius:50%;filter:blur(4px);-webkit-mask:none;mask:none;opacity:.5}
+#stFlood .water::before{background:radial-gradient(circle at 10px 12px,transparent 9px,#1c2a3a 10px) 0 0/20px 12px}
+.fl-sky{left:-40%;right:-40%;top:-40%;bottom:-10%;background:linear-gradient(#0d121a,#151e2b 38%,#1e2938 66%,#233040)}
+.fl-sky::before{content:"";position:absolute;inset:0;opacity:.6;background:radial-gradient(ellipse 30% 14% at 30% 30%,rgba(52,68,90,.6),transparent 70%),radial-gradient(ellipse 36% 16% at 66% 24%,rgba(44,58,78,.55),transparent 72%),radial-gradient(ellipse 40% 14% at 50% 40%,rgba(52,68,90,.4),transparent 75%);animation:fl-cloud 34s linear infinite alternate}
+@keyframes fl-cloud{from{translate:-2% 0}to{translate:2.5% 0}}
+.fl-hills{left:-40%;right:-40%;bottom:24%;height:22%;opacity:.85;background:radial-gradient(ellipse 30% 85% at 22% 100%,#17202d 68%,transparent 70%),radial-gradient(ellipse 34% 95% at 52% 100%,#151e2a 68%,transparent 70%),radial-gradient(ellipse 30% 80% at 82% 100%,#182230 68%,transparent 70%)}
+.fl-far{bottom:24%;height:46px;background:#1c2635;opacity:.7}
+.fl-far::before{content:"";position:absolute;left:-12%;right:-12%;bottom:98%;height:26px;background:#18212f;clip-path:polygon(16% 0,84% 0,100% 100%,0 100%)}
+.fl-haze{left:-40%;right:-40%;bottom:14%;height:26%;background:linear-gradient(rgba(33,45,62,0),rgba(34,46,63,.72) 55%,rgba(24,34,48,.94))}
+.fl-house{bottom:25%;width:var(--w,140px);height:var(--h,104px);background:linear-gradient(#232b37,#19202a);border-top:3px solid #131820;box-shadow:inset 0 6px 14px rgba(0,0,0,.45)}
+.fl-house::before{content:"";position:absolute;left:-9%;right:-9%;bottom:99%;height:46px;clip-path:polygon(14% 0,86% 0,100% 100%,0 100%);
+  background:repeating-linear-gradient(rgba(12,15,20,.35) 0 2px,transparent 2px 7px),linear-gradient(#2c2323,#1e1819)}
+.fl-win{position:absolute;width:26px;height:28px;border:2px solid #161b22;background:radial-gradient(circle at 50% 42%,#ffdf9e,#eeb15a 62%,#b96e22);box-shadow:0 0 18px rgba(238,177,90,.38);animation:fl-flicker 6.5s ease-in-out infinite alternate}
+.fl-win::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:#181d25}
+.fl-win::after{content:"";position:absolute;left:0;right:0;top:48%;height:2px;background:#181d25}
+.fl-win.dim{background:linear-gradient(#273242,#1b2330);box-shadow:none;animation:none}
+@keyframes fl-flicker{0%,100%{opacity:.92}45%{opacity:1}48%{opacity:.82}52%{opacity:.98}}
+.fl-door{position:absolute;left:22%;bottom:0;width:24%;height:34%;background:linear-gradient(#1b222d,#12171f);border:2px solid #10141c;border-bottom:0}
+.fl-banner{position:absolute;left:50%;top:44%;translate:-50% 0;rotate:-1deg;padding:3px 9px;white-space:nowrap;border-radius:2px;
+  background:linear-gradient(#dfd3bb,#c6b79b);color:#231c16;font:600 10px/1.3 Inter,sans-serif;box-shadow:0 4px 10px rgba(0,0,0,.48)}
+.fl-pos{bottom:25%;width:120px;height:84px}
+.fl-pos::before{content:"";position:absolute;left:-6%;right:-6%;top:0;height:22px;background:linear-gradient(#322726,#1f1919);clip-path:polygon(8% 0,92% 0,100% 100%,0 100%)}
+.fl-pos::after{content:"";position:absolute;left:12%;right:12%;top:30px;bottom:0;background:linear-gradient(rgba(28,35,45,.9),rgba(18,23,31,.95));border-top:2px solid #2b3442;
+  box-shadow:-34px 0 0 -30px #1a2029,34px 0 0 -30px #1a2029}
+.fl-bulb{position:absolute;left:50%;top:20px;width:2px;height:16px;background:#14181f;transform-origin:top;animation:fl-sway 3.6s ease-in-out infinite alternate;z-index:1}
+.fl-bulb::after{content:"";position:absolute;left:-4px;bottom:-8px;width:9px;height:9px;border-radius:50%;background:#fff0c4;box-shadow:0 0 14px 5px rgba(238,177,90,.65),0 0 34px 14px rgba(238,177,90,.25)}
+@keyframes fl-sway{from{rotate:-4deg}to{rotate:4.5deg}}
+.fl-upole{bottom:25%;width:7px;height:190px;background:linear-gradient(90deg,#171d26,#262f3d 55%,#131820)}
+.fl-upole::before{content:"";position:absolute;top:12%;left:-13px;width:33px;height:3px;background:#1c232e}
+.fl-wires{left:-30%;width:160%;bottom:calc(25% + 150px);height:40px}
+.fl-lamp{left:31%;bottom:6%;width:9px;height:250px;background:linear-gradient(90deg,#1b222c,#2d3746 50%,#151b23)}
+.fl-lamp::before{content:"";position:absolute;top:0;left:3px;width:48px;height:16px;border-top:4px solid #28313f;border-left:4px solid #28313f;border-top-left-radius:14px}
+.fl-lamp::after{content:"";position:absolute;top:-4px;left:42px;width:22px;height:8px;border-radius:4px 4px 0 0;background:#1f2733;
+  box-shadow:0 7px 0 -2px #fff3cf,0 10px 18px 6px rgba(238,177,90,.8),0 12px 42px 16px rgba(238,177,90,.35)}
+.fl-cone{left:31%;bottom:-4%;width:360px;height:280px;margin-left:-60px;pointer-events:none;overflow:hidden;
+  background:linear-gradient(175deg,rgba(244,190,108,.25),rgba(238,177,90,.11) 46%,rgba(238,177,90,.02) 82%,transparent);clip-path:polygon(28% 0,35% 0,88% 100%,2% 100%)}
+.fl-cone i{position:absolute;width:2.5px;height:2.5px;border-radius:50%;background:rgba(255,226,172,.65);box-shadow:0 0 4px rgba(255,226,172,.5);animation:fl-mist var(--d,5s) linear infinite}
+@keyframes fl-mist{0%{transform:translate(0,0);opacity:0}20%{opacity:.75}80%{opacity:.55}100%{transform:translate(-14px,34px);opacity:0}}
+.fl-fg{filter:blur(1.2px)}
+.fl-bag{width:62px;height:24px;border-radius:12px;background:linear-gradient(#3c362c,#231f19);border:1px solid rgba(255,236,200,.08);box-shadow:0 4px 10px rgba(0,0,0,.65)}
+.fl-gauge{width:16px;height:150px;padding:6px 0;display:flex;flex-direction:column;justify-content:space-evenly;border-radius:2px 2px 0 0;
+  background:linear-gradient(90deg,#b8ae99,#8f8572);box-shadow:4px 0 12px rgba(0,0,0,.6);font:600 7px/1 "IBM Plex Mono",ui-monospace,monospace;color:#1b1713}
+.fl-gauge b{font-weight:600;padding:2px 1px 0;border-top:1.5px solid #2b231c}
+.fl-gauge b.d{border-top-color:#7a1f1f;color:#7a1f1f}
+.fl-sil{width:86px;height:112px;border-radius:36px 36px 0 0;background:#070a0f}
+.fl-sil::before{content:"";position:absolute;top:-32px;left:50%;margin-left:-18px;width:36px;height:38px;border-radius:50%;background:#070a0f}
+.p .hood{position:absolute;top:-3px;left:50%;width:28px;height:22px;margin-left:-14px;border-radius:13px 13px 4px 4px;background:rgba(45,68,86,.92);border-top:1px solid rgba(175,206,232,.35)}
+.p .torch{position:absolute;top:28px;left:30px;width:14px;height:6px;border-radius:3px;background:#161c24;rotate:14deg}
+.p .torch::after{content:"";position:absolute;top:-19px;left:12px;width:170px;height:44px;transform-origin:left center;
+  background:linear-gradient(90deg,rgba(235,244,255,.34),rgba(218,234,252,.1) 52%,transparent);clip-path:polygon(0 42%,100% 0,100% 100%,0 58%);animation:fl-sweep 5.4s ease-in-out infinite alternate}
+@keyframes fl-sweep{from{rotate:-7deg;opacity:.78}to{rotate:6deg;opacity:.96}}
+@media (prefers-reduced-motion:reduce){.fl-sky::before,.fl-win,.fl-bulb,.fl-cone i,.p .torch::after{animation:none}}
+@media (max-width:600px){#stFlood .p:not(.fl-x){scale:.8;transform-origin:bottom center}.fl-banner{font-size:8px}}
+.p.wade{--wl:18px}
+.p.hero.wade{--wl:28px}
+.p.wade::before{display:none}
+.p.wade .b{background:linear-gradient(to top,#16283a var(--wl),rgba(22,40,58,.55) calc(var(--wl) + 1px),transparent calc(var(--wl) + 8px)),var(--c,#2b2f3a)}
+.p.wade::after{content:"";position:absolute;left:-30%;right:-30%;bottom:calc(var(--wl) - 5px);height:10px;border-radius:50%;
+  border:1.5px solid rgba(190,215,245,.32);box-shadow:0 0 0 5px rgba(190,215,245,.06);animation:ripple 2.6s ease-in-out infinite}
+@keyframes ripple{50%{transform:scaleX(1.12);opacity:.6}}
+.p.wade .rf{position:absolute;left:8%;right:8%;top:calc(100% - var(--wl) + 4px);height:56px;opacity:.2;
+  background:repeating-linear-gradient(transparent 0 3px,#10202f 3px 6px),var(--c,#2b2f3a);
+  -webkit-mask:linear-gradient(#000,transparent 85%);mask:linear-gradient(#000,transparent 85%);filter:blur(2px);animation:shimmer 2.8s ease-in-out infinite}
+/* a camera's video light: a cool cone toward the speakers */
+.p .beam{position:absolute;top:2px;right:30px;width:120px;height:40px;background:linear-gradient(270deg,rgba(220,235,255,.28),transparent);
+  clip-path:polygon(100% 40%,100% 60%,0 100%,0 0);pointer-events:none}
+.p .cam.on::before{content:"";position:absolute;left:-4px;top:4px;width:5px;height:8px;background:#eaf3ff;box-shadow:0 0 10px 3px rgba(220,235,255,.6)}
+/* two rain layers at different angle, speed and strength */
+#rain{position:absolute;inset:0;pointer-events:none;display:none;
+  background:repeating-linear-gradient(105deg,transparent 0 14px,rgba(200,220,255,.12) 14px 15px);
+  background-size:100% 40px;animation:rain .5s linear infinite}
+#rain::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(100deg,transparent 0 31px,rgba(210,228,255,.1) 31px 32px);
+  background-size:100% 90px;animation:rain2 .32s linear infinite}
+#scene.flood #rain{display:block}
+@keyframes rain{to{background-position:-20px 40px}}
+@keyframes rain2{to{background-position:-16px 90px}}
+@media (prefers-reduced-motion:reduce){.kipas i,.p.walking .b,.p.walking .h,.refl,.splash,.water::after,.p.wade::after,.p.wade .rf,#rain,#rain::after{animation:none}}
+
+/* dialogue: a broadcast lower third. A dark scrim fades up from the bottom of the scene and the line sits in the
+   same 880px column as the answers below, so the speakers stay visible above it. The panel below is only for typing. */
+#bubble{--col:max(16px,calc((100% - 880px) / 2));position:absolute;left:0;right:0;bottom:0;z-index:3;padding:56px var(--col) 24px;opacity:0;pointer-events:none;
+  background:linear-gradient(rgba(8,9,12,0),rgba(8,9,12,.72) 36%,rgba(8,9,12,.96));
+  font-size:19px;line-height:1.5;color:var(--ink);transition:opacity .25s var(--ease)}
+#bubble #say{display:block;max-width:880px;transform:translateY(6px);transition:transform .25s var(--ease)}
+#bubble.show{opacity:1}
+#bubble.show #say{transform:none}
+/* nameplate: an accent tick, the speaker's name, then their role */
+#bubble small{display:flex;align-items:center;gap:8px;margin-bottom:6px;font:400 13px/18px Inter,sans-serif;color:var(--ink2);white-space:nowrap;overflow:hidden}
+#bubble small::before{content:"";flex:none;width:3px;height:14px;border-radius:2px;background:var(--accent)}
+#bubble small b{font-weight:600;color:var(--accent)}
+#bubble small:empty{display:none}
+#bubble.me small::before{background:var(--ink)}
+#bubble.me small b{color:var(--ink)}
+/* the comment column takes the right side in Bab 2, 5 and 8 */
+/* the scrim stops short of the comment phone so it never dims the comments */
+#scene.feedOn #bubble{padding-left:24px;padding-right:24px;right:calc(min(300px,36%) + 2% + 16px)}
+@media (max-width:600px){#panel{padding-block:16px;gap:10px}#panel #hint{grid-column:1 / -1;grid-row:auto;text-align:left}#opts .opt{--ring:radial-gradient(circle at 15px 23px,transparent 0 3px,#8e7f5e 3.5px 5px,transparent 5.5px);font-size:15px;padding:12px 14px 12px 42px;background-position:30px 0,0 0}#opts .opt.lock{--ring:radial-gradient(circle at 15px 23px,#7a1f1f 0 5px,transparent 5.5px)}}
+@media (max-width:600px){#scene{flex-basis:46%}#bubble{font-size:15px;line-height:1.45;padding:40px 16px 16px}#scene.feedOn #bubble{padding-left:16px;padding-right:12px;right:calc(46% + 8px)}}
+/* short screens give the panel more room for the dialogue box and the answers */
+@media (max-height:720px){#scene{flex-basis:46%}}
+
+/* ---------- panel ---------- */
+/* one 880px column; the prompt and the typing hint share its first row */
+#panel{position:relative;flex:1;display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:safe center;gap:12px 16px;padding:24px max(16px,calc((100% - 880px) / 2));background:linear-gradient(var(--panel),#10131a);border-top:1px solid var(--line);overflow:auto}
+#panel > *{grid-column:1 / -1}
+#prompt{grid-column:1;grid-row:1}
+#hint{grid-column:2;grid-row:1;text-align:right}
+#prompt:empty + #opts + #hint{grid-column:1 / -1;text-align:left}
+/* warnings and narrow screens put the hint under the answers */
+#hint.warn{grid-column:1 / -1;grid-row:auto;text-align:left}
+/* the time limit runs along the top edge of the panel */
+#timer{position:absolute;top:0;left:0;right:0;height:3px;background:rgba(233,230,223,.06);overflow:hidden;visibility:hidden}
+#timer i{display:block;height:100%;width:100%;background:var(--ok)}
+#prompt{font-size:13px;line-height:20px;color:var(--ink2)}
+#prompt:empty{display:none}
+/* the answers are lines on one sheet of the speech script; a ring in the margin marks each line,
+   and the ring of the line being typed fills in */
+#opts{display:flex;flex-direction:column;border-radius:6px;background:linear-gradient(160deg,#f4ecd9,#eadfc4);box-shadow:0 12px 32px rgba(0,0,0,.4);overflow:hidden}
+#opts:empty{display:none}
+.opt{--ring:radial-gradient(circle at 22px 27px,transparent 0 4px,#8e7f5e 4.5px 6px,transparent 6.5px);position:relative;font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:17px;line-height:1.5;padding:14px 20px 14px 60px;color:#2c2820;background:linear-gradient(rgba(155,28,28,.3),rgba(155,28,28,.3)) 44px 0/1px 100% no-repeat,var(--ring);white-space:pre-wrap;overflow-wrap:anywhere;transition:opacity .2s var(--ease),background-color .2s var(--ease)}
+.opt + .opt{border-top:1px dashed #c4b592}
+.opt.dim{opacity:.4}
+/* the chosen line: untyped text is faint pencil, typed text inks in */
+.opt.lock{--ring:radial-gradient(circle at 22px 27px,#7a1f1f 0 6px,transparent 6.5px);color:#786e5c;background-color:rgba(255,253,246,.6)}
+.opt.lock .c-ok{color:#14120e}
+.opt.lock .c-bad{color:#9b1c1c;background:rgba(155,28,28,.14)}
+.opt.lock .cur{box-shadow:-2px 0 0 #7a1f1f}
+/* progress along the line being typed */
+.opt.lock::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:#7a1f1f;transition:width .12s var(--ease)}
+/* the whole sheet slides in at once, so it never shows as blank paper */
+#opts.enter{animation:rise .3s var(--ease) backwards}
+.opt.ev{background-color:rgba(47,107,58,.09)}
+.opt.ev::before{content:"Bukti \00B7  " attr(data-tag);display:block;margin-bottom:4px;font:600 12.5px/1.3 Inter,sans-serif;color:#2f6b3a}
+.opt .c-bad{border-radius:2px}
+/* the hidden input stays inside the viewport so focusing it never scrolls the page,
+   and at 16px iOS does not zoom in when it gets focus */
+#typer{position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0;font-size:16px;caret-color:transparent;pointer-events:none}
+/* phones: a button that opens the on-screen keyboard (iOS opens it only after a tap) */
+#kbdBtn{display:none;grid-row:2;justify-self:stretch;min-height:44px;font:600 15px/1 Inter,sans-serif;border:1px dashed var(--accent);border-radius:10px;background:rgba(242,193,78,.08);color:var(--accent)}
+body.kbd-closed #kbdBtn{display:block}
+/* on-screen keyboard open: the scene gives up room so the answers stay above the keyboard */
+body.kb #scene{flex-basis:28%}
+body.kb #hud{min-height:0;padding-block:6px}
+body.kb #bubble{font-size:14px;line-height:1.4;padding-top:28px;padding-bottom:10px}
+body.kb #panel{padding-block:12px;gap:8px}
+#hint{font-size:12px;line-height:20px;color:var(--muted)}
+#hint kbd{font:500 11px/1 "JetBrains Mono",monospace;border:1px solid #4a5163;border-bottom-width:2px;border-radius:4px;padding:2px 5px;color:var(--ink2)}
+/* trust and elite changes float out of the HUD numbers */
+#trustNum,#eliteNum{position:relative}
+.fdelta{position:absolute;left:50%;top:100%;transform:translate(-50%,10px);font:700 13px/1 Inter,sans-serif;pointer-events:none;animation:fdelta 1.6s var(--ease) forwards;white-space:nowrap}
+.fdelta.up{color:var(--ok)}.fdelta.down{color:var(--bad)}
+@keyframes fdelta{0%{opacity:0;transform:translate(-50%,18px)}15%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translate(-50%,2px)}}
+@media (prefers-reduced-motion:reduce){#opts.enter{animation:none}.fdelta{animation-duration:.01s}}
+#hint.warn{color:var(--bad)}
+/* what the answer caused: a note on the same sheet */
+.result{font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums;padding:16px 20px;color:#2c2820;animation:rise .3s var(--ease) backwards}
+.delta-up{color:var(--ok)} .delta-down{color:var(--bad)}
+.result .delta-up{color:#2f6b3a}.result .delta-down{color:#9b1c1c}.result .delta-elite{color:#a4401f}.result .delta-prom{color:#7a5a10}
+.result .deltas{padding-top:10px;border-top:1px dashed #c4b592}
+.result .twist{background:#fffdf6;box-shadow:0 2px 8px rgba(60,45,20,.18)}
+
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;overflow:auto;background:rgba(5,6,9,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;z-index:9}
+.overlay h1{font-size:clamp(32px,8vw,60px);letter-spacing:.1em;font-weight:800;min-height:1.1em}
+.overlay h2{font-size:20px;color:var(--accent);min-height:1.2em}
+.overlay p{max-width:540px;color:var(--muted);line-height:1.6}
+.overlay .note{font-size:13px}
+.overlay .skip{font-size:11px;color:#555}
+.caret::after{content:"▌";color:var(--accent);animation:blink .8s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+button{font:inherit;font-size:16px;padding:10px 22px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
+button:hover{background:var(--accent);color:#111}
+label{color:var(--muted);font-size:14px;display:flex;gap:8px;align-items:center;justify-content:center}
+.field{font:inherit;font-size:20px;padding:10px 14px;width:min(360px,90vw);border-radius:8px;border:1px solid #333;background:#11141b;color:var(--ink);text-align:center}
+.row{display:flex;gap:18px;justify-content:center}
+.err{color:var(--bad);font-size:13px;min-height:1.2em}
+.hidden{display:none!important}
+/* ---------- chapter typing stats ---------- */
+.stats{width:min(980px,100%);font-family:ui-monospace,Menlo,Consolas,monospace;text-align:left;color:var(--muted)}
+.stats .top{display:grid;grid-template-columns:auto 1fr;gap:12px 24px;align-items:center}
+.stats .big .lbl{font-size:clamp(18px,3vw,30px);color:#6b7080}
+.stats .big .val{font-size:clamp(44px,8vw,84px);color:var(--accent);line-height:1}
+.stats svg{width:100%;height:auto;display:block}
+.stats{width:min(760px,100%);margin-top:8px;border-top:1px solid #2a2e38;padding-top:14px}
+.stats .bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:6px;text-align:center}
+.stats .bottom .lbl{font-size:13px;color:#6b7080}
+.stats .bottom .val{font-size:clamp(18px,3vw,30px);color:var(--accent);line-height:1.15}
+.stats .bottom .sm{font-size:13px;color:var(--accent);line-height:1.4}
+/* one key figure in the accent (speed); the rest stay ink */
+.stats{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+.stats .bottom .lbl{font:400 13px/1.4 Inter,sans-serif;color:#a3a8b4}
+.stats .bottom .lbl::first-letter{text-transform:uppercase}
+.stats .bottom .val{font-weight:500;color:var(--ink)}
+.stats .bottom > :first-child .val{color:var(--accent)}
+.overlay .stats .note,.overlay .stats .stats-title{max-width:none;margin-inline:auto;text-align:center}
+.overlay .stats .note{font:400 12px/1.5 Inter,sans-serif;color:#8a8f9c;margin-top:4px}
+@media (max-width:640px){.stats .top{grid-template-columns:1fr}.stats .big{display:flex;gap:24px}.stats .bottom{grid-template-columns:repeat(2,1fr)}}
+
+/* =================== MENU (title + name card) =================== */
+body.menu #hud{visibility:hidden}
+body.menu #world{animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translateZ(30px) translateX(-24px)}to{transform:translateZ(60px) translateX(24px)}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.overlay.menu{background:radial-gradient(ellipse 70% 60% at 50% 45%,rgba(13,15,20,.45),rgba(5,6,9,.94) 75%);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);padding:64px 16px 96px;gap:0}
+.live{position:absolute;top:18px;left:20px;display:flex;align-items:center;gap:8px;font:600 12px/1 Inter,sans-serif;letter-spacing:.14em;color:#e9e6df}
+.live .dot{width:9px;height:9px;border-radius:50%;background:#e23b3b;box-shadow:0 0 0 0 rgba(226,59,59,.7);animation:pulse 1.6s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(226,59,59,0)}100%{box-shadow:0 0 0 0 rgba(226,59,59,0)}}
+.menu-body{display:flex;flex-direction:column;align-items:center;gap:18px;max-width:760px;width:100%}
+.menu-body > *{animation:rise .8s cubic-bezier(.2,.7,.2,1) backwards}
+.menu-body > *:nth-child(2){animation-delay:.12s}.menu-body > *:nth-child(3){animation-delay:.3s}
+.menu-body > *:nth-child(4){animation-delay:.45s}.menu-body > *:nth-child(5){animation-delay:.6s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+.kicker{font:italic 500 17px/1.4 "Playfair Display",Georgia,serif;color:#c9c5bc}
+.overlay h1.logo{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:clamp(58px,13vw,136px);line-height:.88;letter-spacing:-.01em;display:flex;flex-direction:column;align-items:center;text-transform:none}
+.logo span:last-child{font-style:italic;color:var(--accent);position:relative}
+.logo span:last-child::after{content:"";position:absolute;left:4%;right:4%;bottom:-.08em;height:.06em;background:#c0392b;transform-origin:left;animation:bar 1s .9s cubic-bezier(.2,.7,.2,1) backwards}
+@keyframes bar{from{transform:scaleX(0)}}
+.overlay.menu .tagline{max-width:520px;color:#c9c5bc;font-size:clamp(15px,2.2vw,17px);line-height:1.6;margin-top:6px}
+/* difficulty is picked on a ballot paper: three numbered boxes, the chosen one gets punched */
+.ballot{width:100%;margin-top:8px;border-radius:6px;overflow:hidden;background:linear-gradient(160deg,#f4ecd9,#e9dcbd);color:#22201a;box-shadow:0 18px 40px rgba(0,0,0,.45);text-align:left}
+.ballot-head{display:flex;justify-content:space-between;gap:12px;margin:0 16px;padding:10px 0 8px;border-bottom:3px double #7a1f1f;font:600 13px/1.3 Inter,sans-serif;color:#7a1f1f}
+.ballot-head span:last-child{font-weight:500;color:#5e553f}
+.modes{display:grid;grid-template-columns:repeat(3,1fr)}
+.mode{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr);gap:2px 12px;align-content:start;justify-content:stretch;padding:14px 16px 16px;cursor:pointer;transition:background-color .15s var(--ease)}
+.mode + .mode{border-left:1px dashed #b5a57f}
+.mode:hover{background:rgba(122,31,31,.05)}
+.mode .k{position:relative;grid-row:1 / 3;width:36px;height:36px;display:grid;place-items:center;border:1.5px solid #3b3527;border-radius:4px;font:700 18px/1 "Playfair Display",Georgia,serif;color:#3b3527}
+.mode .k::after{content:"";position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;border-radius:46% 54% 50% 50%;background:#14161c;box-shadow:inset 0 2px 3px rgba(0,0,0,.8),0 0 0 1.5px rgba(122,31,31,.35);transform:scale(0);transition:transform .15s var(--ease)}
+.mode b{font:700 19px/1.2 "Playfair Display",Georgia,serif;color:#1d1b16}
+.mode small{font-size:13px;line-height:1.45;color:#5e553f}
+.mode:has(input:checked){background:rgba(122,31,31,.1)}
+.mode:has(input:checked) .k{border-color:#7a1f1f;color:#7a1f1f}
+.mode:has(input:checked) .k::after{transform:scale(1)}
+.mode:has(input:focus-visible){outline:2px solid #7a1f1f;outline-offset:-3px}
+/* flat, solid buttons: no glow, no lift; the press is a small scale-down */
+.cta{display:inline-flex;align-items:center;gap:12px;min-height:48px;font:600 17px/1 Inter,sans-serif;padding:14px 24px;border-radius:12px;border:0;background:var(--accent);color:#16130c;transition:background-color .15s var(--ease),transform .1s var(--ease);margin-top:4px}
+.cta:hover{background:#f6cd6a;color:#16130c}
+.cta:active{transform:scale(.97)}
+.cta:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.cta kbd{font:500 11px/1 "JetBrains Mono",monospace;padding:4px 6px;border-radius:4px;background:rgba(0,0,0,.14)}
+.cta.small{font-size:15px;padding:12px 20px}
+.starts{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center}
+.cta.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+.cta.ghost:hover{background:rgba(242,193,78,.12);color:var(--accent)}
+.ticker{position:absolute;left:0;right:0;bottom:0;height:38px;display:flex;align-items:stretch;background:rgba(10,12,16,.92);border-top:1px solid #2a2e38;overflow:hidden}
+.ticker .tag{flex:none;display:flex;align-items:center;padding:0 14px;background:#a32626;color:#fff;font:700 12px/1 Inter,sans-serif;letter-spacing:.12em}
+.ticker .track{flex:1;overflow:hidden;position:relative}
+.ticker .run{position:absolute;top:0;bottom:0;display:flex;align-items:center;white-space:nowrap;animation:marquee 60s linear infinite;font-size:14px;color:#d8d4cb}
+.ticker .run span{padding:0 22px;border-right:1px solid #3a3f4c}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.credit{position:absolute;bottom:48px;left:0;right:0;font-size:11px;color:#8a8f9c;text-align:center;padding:0 16px}
+@media (prefers-reduced-motion:reduce){body.menu #world,.ticker .run,.live .dot{animation:none}.menu-body > *{animation-duration:.01s}}
+@media (max-width:600px){.modes{grid-template-columns:1fr}.mode{padding:12px 16px}.mode + .mode{border-left:0;border-top:1px dashed #b5a57f}.ballot-head span:last-child{display:none}.live{font-size:10px}.credit{bottom:44px}}
+
+/* =================== COVER (title screen): political-newspaper look ===================
+   A 4-layer 2.5D stage behind the menu: the chamber, three rows of pot-bellied rat officials,
+   and the player in front as a faceless white-headed figure. Everything is scoped to #title. */
+#title{--cv-ivory:#f6f2e9;--cv-gold:#f5b935;--cv-gold-hover:#f9c857;--cv-maroon:#a62b2b;--cv-ink:#7a1f1f;--cv-paper:#f4ecda;--cv-paper-sel:#e8dcc4;
+  --cv-display:"DM Serif Display",Georgia,serif;--cv-sans:"Plus Jakarta Sans",system-ui,-apple-system,sans-serif;--cv-mono:"JetBrains Mono",monospace;
+  background:radial-gradient(ellipse 86% 66% at 50% 34%,#212c3d 0%,#131a25 56%,#090c11 100%);backdrop-filter:none;-webkit-backdrop-filter:none;
+  justify-content:flex-start;padding:266px 20px 96px;font-family:var(--cv-sans)}
+#title .cv-art{position:fixed;inset:0 0 34px 0;z-index:0;pointer-events:none;overflow:hidden}
+#title .cv-scene{position:relative;width:100%;height:100%;perspective:1100px;overflow:hidden}
+#title .cv-world{position:relative;width:100%;height:100%;transform-style:preserve-3d;will-change:transform}
+#title .cv-layer{position:absolute;inset:0;transform-style:preserve-3d}
+#title .cv-far{transform:translateZ(-170px) scale(1.155)}
+#title .cv-midback{transform:translateZ(-105px) scale(1.095)}
+#title .cv-midfront{transform:translateZ(-45px) scale(1.041)}
+#title .cv-hero{transform:translateZ(16px) scale(.985)}
+#title .cv-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+#title .cv-scrim{position:absolute;inset:0;z-index:6;background:radial-gradient(ellipse 50% 37% at 50% 74%,rgba(9,11,16,.91) 0%,rgba(9,11,16,.74) 55%,rgba(9,11,16,.14) 84%,transparent 100%),linear-gradient(180deg,rgba(9,11,16,.2) 0%,transparent 22%,transparent 50%,rgba(9,11,16,.94) 100%)}
+#title .cv-grain{position:absolute;inset:0;width:100%;height:100%;z-index:7;opacity:.036;mix-blend-mode:overlay}
+#title .cv-breathe{transform-origin:0 565px;animation:cvBreathe 5.4s ease-in-out infinite alternate}
+#title .cv-laugh{animation:cvLaugh 2.5s ease-in-out infinite alternate}
+#title .cv-sleepy{animation:cvNod 4.4s ease-in-out infinite alternate}
+@keyframes cvBreathe{from{transform:scaleY(1)}to{transform:scaleY(1.01)}}
+@keyframes cvLaugh{0%{transform:translateY(0)}50%{transform:translateY(-2.5px)}100%{transform:translateY(.5px)}}
+@keyframes cvNod{0%{transform:translateY(0)}65%{transform:translateY(3px)}100%{transform:translateY(1px)}}
+#title .menu-body{position:relative;z-index:1;gap:0;max-width:640px;margin-top:auto} /* sits low, still scrolls when taller than the screen */
+#title .live{z-index:2;top:14px;left:22px;gap:9px;font:700 11.5px/1 var(--cv-mono);letter-spacing:.14em;color:var(--cv-ivory);text-shadow:0 2px 10px rgba(0,0,0,.9)}
+#title .live .dot{width:8px;height:8px;background:#ef4444;box-shadow:0 0 10px rgba(239,68,68,.9),0 0 0 3px rgba(239,68,68,.24);animation:cvLive 1.7s ease-in-out infinite}
+@keyframes cvLive{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.86)}}
+#title .kicker{font:italic 400 clamp(15.5px,1.32vw,18.5px)/1.4 var(--cv-display);color:#cdd4de;margin-bottom:5px;text-shadow:0 2px 12px rgba(0,0,0,.95)}
+#title h1.logo{font-family:var(--cv-display);font-weight:400;font-size:clamp(53px,6.2vw,86px);line-height:.91;letter-spacing:-.015em;margin-bottom:12px;min-height:0;
+  text-shadow:0 4px 14px rgba(0,0,0,.95),0 14px 34px rgba(0,0,0,.85)}
+#title .logo span:first-child{color:var(--cv-ivory)}
+#title .logo span:last-child{font-style:italic;color:var(--cv-gold)}
+#title .logo span:last-child::after{content:none}
+#title .cv-rule{width:min(355px,76vw);height:4px;background:var(--cv-maroon);border-radius:2px;margin:0 auto 12px;box-shadow:0 2px 10px rgba(0,0,0,.75);transform-origin:center;animation:bar 1s .9s cubic-bezier(.2,.7,.2,1) backwards}
+#title.overlay.menu .tagline{font:400 clamp(14px,1.04vw,15.7px)/1.5 var(--cv-sans);color:#e2e6ec;max-width:470px;margin:0 auto 16px;text-shadow:0 2px 12px rgba(0,0,0,.98)}
+#title .ballot{max-width:640px;margin:0 auto 15px;background-color:var(--cv-paper);border-radius:8px;border:1px solid rgba(122,31,31,.48);color:#191512;
+  box-shadow:0 20px 48px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.72);
+  background-image:repeating-linear-gradient(180deg,transparent 0,transparent 22px,rgba(122,31,31,.12) 22px,rgba(122,31,31,.12) 23px)}
+#title .ballot-head{margin:0;padding:8px 18px 7px;border-bottom:1.2px solid rgba(122,31,31,.55);background:rgba(244,236,218,.84);font:700 12.5px/1.3 var(--cv-sans);color:var(--cv-ink)}
+#title .ballot-head span:last-child{font:500 11.8px/1.3 var(--cv-sans);color:#524639}
+#title .mode{grid-template-columns:26px minmax(0,1fr);gap:3px 11px;padding:13px 14px 14px;transition:background-color .18s ease}
+#title .mode + .mode{border-left:1px solid rgba(122,31,31,.22)}
+#title .mode:hover{background:rgba(232,220,196,.55)}
+#title .mode:has(input:checked){background:var(--cv-paper-sel)}
+#title .mode .k{width:26px;height:26px;margin-top:2px;border:1.5px solid #4a3d31;border-radius:3px;background:rgba(255,255,255,.36);font:700 13px/1 var(--cv-mono);color:#191512}
+#title .mode .k::after{right:-5px;bottom:-5px;width:10px;height:10px;border-radius:50%;background:#191512;border:1.5px solid var(--cv-paper-sel);box-shadow:none}
+#title .mode:has(input:checked) .k{border-color:var(--cv-ink);background:rgba(122,31,31,.08);color:#191512}
+#title .mode b{font:400 16.8px/1.18 var(--cv-display);color:#191512}
+#title .mode small{font:400 11.5px/1.38 var(--cv-sans);color:#4f4437}
+#title .starts{gap:12px;margin-bottom:4px}
+#title .cta{margin-top:0;min-height:44px;font:700 14.4px/1 var(--cv-sans);padding:11px 19px;border-radius:8px;gap:9px;background:var(--cv-gold);color:#17120a;box-shadow:0 8px 24px rgba(0,0,0,.55);transition:background-color .18s ease,transform .14s ease}
+#title .cta:hover{background:var(--cv-gold-hover);color:#17120a;transform:translateY(-1px)}
+#title .cta kbd{font:700 11px/1 var(--cv-mono);padding:2px 6px;border-radius:4px;background:rgba(23,18,10,.15);border:1px solid rgba(23,18,10,.24);color:#17120a}
+#title .cta.ghost{background:rgba(10,13,18,.78);border:1.5px solid var(--cv-gold);color:var(--cv-gold);font-weight:600;padding:10px 19px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#title .cta.ghost:hover{background:rgba(245,185,53,.14);color:var(--cv-gold)}
+#title .credit{z-index:1;left:20px;right:auto;bottom:42px;max-width:450px;padding:0;text-align:left;font:400 11.2px/1.45 var(--cv-sans);color:#8b94a0}
+#title .ticker{z-index:2;height:34px;background:#080a0e;border-top:1px solid rgba(246,242,233,.12)}
+#title .ticker .tag{padding:0 14px;background:#b91c1c;font:700 11px/1 var(--cv-mono);letter-spacing:.08em}
+#title .ticker .run{font:500 12.2px/1 var(--cv-sans);color:#dce1e8}
+#title .ticker .run span{border-right-color:rgba(107,114,128,.6)}
+@media (max-width:768px){
+  #title{padding:min(312px,40dvh) 16px 96px} /* art is fixed to the screen here, so start the text below the white head */
+  #title .live{top:12px;left:14px;font-size:10.2px;letter-spacing:.1em}
+  #title h1.logo{font-size:44px}
+  #title .modes{grid-template-columns:1fr}
+  #title .mode + .mode{border-left:0;border-top:1px solid rgba(122,31,31,.22)}
+  #title .starts{width:100%;flex-direction:column}
+  #title .cta{width:100%;justify-content:center}
+  #title .credit{position:static;margin:14px auto 0;text-align:center;left:auto}
+}
+@media (prefers-reduced-motion:reduce){#title .cv-breathe,#title .cv-laugh,#title .cv-sleepy,#title .live .dot,#title .cv-rule{animation:none}}
+#title .ticker{position:fixed}
+
+/* ---- name: member ID card ---- */
+.idcard{width:min(560px,100%);border-radius:16px;overflow:hidden;background:linear-gradient(160deg,#f4ecd9,#e6d8b6);color:#22201a;box-shadow:0 24px 60px rgba(0,0,0,.55);text-align:left;animation:rise .6s cubic-bezier(.2,.7,.2,1) backwards}
+.id-head{display:flex;align-items:center;gap:12px;padding:14px 18px;background:#7a1f1f;color:#f2d38a}
+.id-head small{display:block;font:500 12px/1.3 Inter,sans-serif;color:#f2d38a}
+.id-head b{font:700 18px/1.25 "Playfair Display",Georgia,serif;color:#fff3d6}
+.emblem{flex:none;width:38px;height:38px;border-radius:50%;background:radial-gradient(circle,#e9c25a 0 40%,#b88a2b 41% 60%,#e9c25a 61%);box-shadow:0 0 0 2px #f2d38a}
+.id-body{display:flex;gap:20px;padding:20px 20px 16px}
+.photo{flex:none;width:96px;height:120px;border-radius:8px;background:#cdbf9c;border:2px solid #b5a57f;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden}
+.photo .ph{width:42px;height:42px;border-radius:50%;background:#8e7f5e}.photo .pb{width:76px;height:44px;border-radius:30px 30px 0 0;background:#8e7f5e;margin-top:4px}
+.fields{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+.flabel{font:500 13px/1 Inter,sans-serif;color:#6a5f45;justify-content:flex-start}
+.idcard .field{width:100%;text-align:left;font:600 22px/1.2 "JetBrains Mono",monospace;color:#1d1b16;background:transparent;border:0;border-bottom:2px solid #8e7f5e;border-radius:0;padding:6px 2px}
+.idcard .field:focus{outline:none;border-bottom-color:#7a1f1f}
+.idcard .field::placeholder{color:#6a5f45;font-weight:500}
+.idcard .err{color:#9b1c1c;font-size:12.5px;min-height:1.3em;text-align:left}
+.seg{display:inline-flex;border:1.5px solid #8e7f5e;border-radius:999px;overflow:hidden;align-self:flex-start;margin-bottom:6px}
+.seg label{cursor:pointer;color:#3b3527}
+.seg span{display:block;padding:14px 22px;font:600 15px/1 Inter,sans-serif}
+.seg label:has(input:checked) span{background:#7a1f1f;color:#fff3d6}
+.seg label:has(input:focus-visible) span{outline:2px solid #7a1f1f;outline-offset:-4px}
+.chk{justify-content:flex-start;color:#3b3527;font-size:14px;gap:10px;padding:10px 0;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:#7a1f1f}
+/* signature: a white strip in the fields column, under the salutation */
+.sign{width:100%;display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.sign-head{display:flex;align-items:center;justify-content:space-between;min-height:20px}
+.sign-clear{font:600 12px/1 Inter,sans-serif;padding:4px 8px;border:0;border-radius:6px;background:transparent;color:#7a1f1f;cursor:pointer}
+.sign-clear:hover{background:rgba(122,31,31,.1);color:#7a1f1f}
+#signPad{display:block;width:100%;height:96px;background:#fff;border:1px solid #b5a57f;border-radius:8px;cursor:crosshair;touch-action:none;
+  background-image:linear-gradient(transparent calc(100% - 26px),#d9cfb8 calc(100% - 26px),#d9cfb8 calc(100% - 25px),transparent calc(100% - 25px))}
+#signPad:focus-visible{outline:2px solid #7a1f1f;outline-offset:2px}
+.sign-hint{font-size:12px;color:#6a5f45}
+.id-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px 16px;border-top:1px dashed #b5a57f;font-size:12px;color:#6a5f45}
+.id-foot .cta{background:#7a1f1f;color:#fff3d6;box-shadow:none}
+.id-foot .cta:hover{background:#932727;color:#fff3d6}
+.id-foot .cta kbd{background:rgba(255,255,255,.15)}
+@media (max-width:480px){.photo{display:none}.id-foot{flex-direction:column;align-items:stretch;text-align:center}.sign{width:100%}}
+
+/* in-game confirm dialog (window.confirm is blocked in some embedded browsers) */
+#confirmBox{z-index:20;background:rgba(5,6,9,.8)}
+/* leaderboard: a notice pinned to the parliament board, only for players who finished every chapter */
+#board{z-index:15;background:rgba(5,6,9,.86)}
+.lb{width:min(560px,100%);max-height:calc(100dvh - 48px);display:flex;flex-direction:column;text-align:left;background:linear-gradient(160deg,#f4ecd9,#e9dcbd);color:#22201a;border-radius:6px;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.lb-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 20px 12px;border-bottom:1px solid rgba(34,32,26,.12)}
+.lb-head small{display:block;font:500 12px/1.4 Inter,sans-serif;color:#6a5f45;margin-bottom:4px}
+.overlay .lb h2{font:700 26px/1.15 "Playfair Display",Georgia,serif;color:#1d1b16;min-height:0}
+.overlay .lb p{color:#5e553f;font-size:13px;line-height:1.5;max-width:none;margin-top:6px}
+.lb-x{flex:none;width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:#5e553f;display:grid;place-items:center}
+.lb-x:hover{background:rgba(34,32,26,.08)}
+.lb-x svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none}
+.lb-tabs{display:flex;gap:4px;padding:12px 20px 0}
+.lb-tabs button{min-height:40px;padding:0 16px;border:0;border-radius:8px 8px 0 0;background:transparent;font:500 14px/1 Inter,sans-serif;color:#6a5f45;border-bottom:2px solid transparent}
+.lb-tabs button[aria-selected=true]{color:#7a1f1f;border-bottom-color:#7a1f1f;background:rgba(122,31,31,.06)}
+.lb-body{overflow:auto;padding:8px 12px 16px;border-top:1px solid rgba(34,32,26,.12)}
+.lb ol{list-style:none;margin:0;padding:0}
+.lb li{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:12px;min-height:52px;padding:8px;border-radius:8px}
+.lb li+li{border-top:1px solid rgba(34,32,26,.08)}
+.lb li.me{background:rgba(122,31,31,.08)}
+.lb .rk{font:600 15px/1 Inter,sans-serif;color:#8a7d5c;text-align:center;font-variant-numeric:tabular-nums}
+.lb li:nth-child(-n+3) .rk{color:#7a1f1f;font:700 20px/1 "Playfair Display",Georgia,serif}
+.lb .nm{min-width:0}
+.lb .nm b{display:block;font:600 16px/1.3 Inter,sans-serif;color:#1d1b16;overflow-wrap:anywhere}
+.lb .nm span{display:block;font:400 12px/1.4 Inter,sans-serif;color:#6a5f45}
+.lb .vl{font:600 18px/1 Inter,sans-serif;color:#1d1b16;font-variant-numeric:tabular-nums;text-align:right}
+.lb .vl small{display:block;font:400 11px/1.4 Inter,sans-serif;color:#6a5f45;margin-top:2px}
+.lb-empty{padding:28px 12px;text-align:center;font:400 14px/1.5 Inter,sans-serif;color:#5e553f}
+/* score block on the ending card */
+.myscore{width:min(580px,100%);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;text-align:left;background:linear-gradient(160deg,#f4ecd9,#e9dcbd);color:#22201a;border-radius:6px;padding:16px 20px;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.myscore .lbl{font:500 12px/1.4 Inter,sans-serif;color:#6a5f45}
+.myscore .big{font:700 34px/1.1 "Playfair Display",Georgia,serif;color:#7a1f1f;font-variant-numeric:tabular-nums}
+.overlay .myscore p{font:400 13px/1.5 Inter,sans-serif;color:#5e553f;margin-top:4px;max-width:none}
+.myscore button{flex:none;min-height:44px;font:600 15px/1 Inter,sans-serif;padding:0 20px;border:0;border-radius:10px;background:#7a1f1f;color:#fff3d6}
+.myscore button:hover{background:#932727}
+/* first-run tutorial: a spotlight on one element, everything around it dimmed and blurred, a short card beside it */
+#tour{position:fixed;inset:0;z-index:40}
+#tour .t-blur{position:absolute;inset:0;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+#tour .t-hole{position:absolute;border-radius:12px;box-shadow:0 0 0 200vmax rgba(5,7,10,.74);outline:2px solid var(--accent);outline-offset:2px;pointer-events:none;
+  transition:left .35s var(--ease),top .35s var(--ease),width .35s var(--ease),height .35s var(--ease)}
+#tour .t-hole.none{outline:0}
+#tour .t-hole:not(.none)::after{content:"";position:absolute;inset:-6px;border-radius:16px;border:2px solid var(--accent);opacity:0;animation:t-pulse 1.6s ease-out infinite}
+@keyframes t-pulse{0%{opacity:.7;transform:scale(.98)}100%{opacity:0;transform:scale(1.04)}}
+#tour .t-tip{position:absolute;width:min(360px,calc(100vw - 32px));padding:18px 18px 14px;border-radius:12px;background:#f4ecd9;color:#221c17;text-align:left;
+  box-shadow:0 18px 48px rgba(0,0,0,.55);transition:left .35s var(--ease),top .35s var(--ease)}
+#tour .t-step{font:600 12px/1 Inter,sans-serif;color:#7a1f1f;letter-spacing:.02em}
+#tour h3{margin:8px 0 6px;font:700 20px/1.25 "Playfair Display",Georgia,serif}
+#tour p{margin:0;font:400 15px/1.55 Inter,sans-serif;color:#3a3029}
+#tour p b{color:#221c17}
+#tour .t-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
+#tour .t-skip{min-height:40px;padding:0 4px;border:0;background:none;color:#6b5d4d;font:500 14px/1 Inter,sans-serif;text-decoration:underline;cursor:pointer}
+#tour .t-next{min-height:44px;padding:0 18px;border:0;border-radius:8px;background:#7a1f1f;color:#fff8f0;font:600 15px/1 Inter,sans-serif;cursor:pointer}
+#tour .t-next:hover{background:#962828}
+#tour .t-next:focus-visible,#tour .t-skip:focus-visible{outline:2px solid #7a1f1f;outline-offset:3px}
+#tour .t-next kbd{margin-left:6px;font:500 11px/1 "JetBrains Mono",monospace;opacity:.75}
+/* pop-up motion: the dim layer fades in, the card springs up on every step, and both leave quickly */
+#tour{animation:t-fade .25s ease-out}
+@keyframes t-fade{from{opacity:0}}
+#tour .t-tip.pop{animation:t-pop .45s cubic-bezier(.34,1.56,.64,1)}
+#tour .t-tip.pop > *{animation:t-rise .35s cubic-bezier(.2,.7,.2,1) backwards}
+#tour .t-tip.pop > :nth-child(2){animation-delay:.06s}#tour .t-tip.pop > :nth-child(3){animation-delay:.12s}#tour .t-tip.pop > :nth-child(4){animation-delay:.18s}
+@keyframes t-pop{0%{opacity:0;transform:translateY(12px) scale(.86)}100%{opacity:1;transform:none}}
+@keyframes t-rise{from{opacity:0;transform:translateY(6px)}}
+#tour .t-hole.pop:not(.none){animation:t-hole-pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes t-hole-pop{0%{outline-offset:12px;outline-color:transparent}100%{outline-offset:2px}}
+#tour.out{animation:t-out .18s ease-in forwards;pointer-events:none}
+#tour.out .t-tip{animation:t-pop-out .18s ease-in forwards}
+@keyframes t-out{to{opacity:0}}
+@keyframes t-pop-out{to{opacity:0;transform:translateY(6px) scale(.94)}}
+@media (prefers-reduced-motion:reduce){#tour .t-hole,#tour .t-tip{transition:none}#tour .t-hole::after{animation:none}
+  #tour,#tour .t-tip.pop,#tour .t-tip.pop > *,#tour .t-hole.pop,#tour.out,#tour.out .t-tip{animation:none}}
+.dialog{width:min(380px,100%);background:#151922;border:1px solid #2d3240;border-radius:14px;padding:22px;text-align:left;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.dialog h2{color:var(--ink);font-size:20px;margin-bottom:6px}
+.dialog p{color:#b5b9c4;margin-bottom:18px}
+.dialog-actions{display:flex;justify-content:flex-end;gap:10px}
+.dialog-actions button{min-height:44px}
+button.danger{border-color:var(--bad);color:var(--bad)}
+button.danger:hover{background:var(--bad);color:#111}
+
+/* =================== CHAPTER CARDS =================== */
+.overlay.chapter{background:radial-gradient(ellipse 75% 65% at 50% 45%,rgba(13,15,20,.6),rgba(5,6,9,.95) 78%);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);padding:56px 16px 64px;gap:0;justify-content:safe center}
+.chap{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:760px}
+.chap-mark{position:absolute;top:-.3em;left:50%;transform:translateX(-50%);z-index:-1;font:italic 900 clamp(200px,34vw,360px)/1 "Playfair Display",Georgia,serif;color:transparent;-webkit-text-stroke:1.5px rgba(242,193,78,.16);pointer-events:none;user-select:none;animation:fadeIn 1.2s ease backwards}
+@keyframes fadeIn{from{opacity:0}}
+.overlay.chapter h2{font:italic 500 20px/1.4 "Playfair Display",Georgia,serif;color:var(--accent);min-height:1.4em}
+.overlay.chapter h1{position:relative;font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:clamp(46px,10vw,100px);line-height:1.02;letter-spacing:-.01em;min-height:1.02em;padding-bottom:.16em;text-wrap:balance}
+.overlay.chapter h1::before{content:"";position:absolute;left:50%;bottom:0;width:72px;height:4px;margin-left:-36px;background:#c0392b;transform:scaleX(0);transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+.overlay.chapter h1.done::before{transform:scaleX(1)}
+.overlay.chapter p.story{max-width:580px;color:#c9c5bc;font-size:clamp(16px,2.2vw,18px);line-height:1.65;min-height:1.65em}
+.chap-after{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+.chap-after > *{animation:rise .6s cubic-bezier(.2,.7,.2,1) backwards}
+.chap-after > *:nth-child(2){animation-delay:.08s}.chap-after > *:nth-child(3){animation-delay:.16s}
+.chap-after > *:nth-child(4){animation-delay:.24s}.chap-after > *:nth-child(n+5){animation-delay:.32s}
+/* briefing: a cream memo pinned under the title */
+.brief{width:min(580px,100%);text-align:left;background:linear-gradient(160deg,#f4ecd9,#e9dcbd);color:#22201a;border-radius:6px;padding:16px 20px 18px;display:flex;flex-direction:column;gap:6px;box-shadow:0 18px 40px rgba(0,0,0,.45);transform:rotate(-.6deg)}
+.brief-tag{font:600 13px/1.2 Inter,sans-serif;color:#7a1f1f}
+.brief-tag.new::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#e23b3b;margin-right:8px;vertical-align:1px}
+.brief-title{font:700 21px/1.25 "Playfair Display",Georgia,serif;color:#1d1b16}
+.overlay .brief p{color:#3b3527;font-size:15px;line-height:1.55;max-width:none}
+/* rules read as a short checklist on the memo */
+.rules{list-style:none;display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:6px;padding-top:10px;border-top:1px dashed #b5a57f}
+.rules li{display:flex;align-items:center;gap:8px;font:500 13.5px/1.3 Inter,sans-serif;color:#3b3527}
+.rules li::before{content:"";flex:none;width:12px;height:7px;margin-top:-3px;border-left:2px solid #7a1f1f;border-bottom:2px solid #7a1f1f;transform:rotate(-45deg)}
+/* outside a memo (ending summary) the checklist sits on the dark card */
+.chap-after > .rules{border-top-color:#2d3240;justify-content:center}
+.chap-after > .rules li{color:#d8d4cb}
+.chap-after > .rules li::before{border-color:var(--accent)}
+/* ending: a suggestion box, the same cream memo as the briefing */
+.saran{width:min(580px,100%);text-align:left;background:linear-gradient(160deg,#f4ecd9,#e9dcbd);color:#22201a;border-radius:6px;padding:16px 20px;display:flex;flex-direction:column;gap:8px;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.saran label{justify-content:flex-start;font:700 21px/1.25 "Playfair Display",Georgia,serif;color:#1d1b16}
+.saran textarea{font:400 16px/1.5 Inter,sans-serif;min-height:96px;resize:vertical;padding:10px 12px;border:1px solid #b5a57f;border-radius:6px;background:#fffdf6;color:#1d1b16}
+.saran textarea::placeholder{color:#6a5f45}
+.saran textarea:focus-visible{outline:2px solid #7a1f1f;outline-offset:1px}
+.saran-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.saran-status{font-size:13px;line-height:1.4;color:#5e553f}
+.saran button{flex:none;min-height:44px;font:600 15px/1 Inter,sans-serif;padding:0 20px;border:0;border-radius:10px;background:#7a1f1f;color:#fff3d6}
+.saran button:hover{background:#932727;color:#fff3d6}
+.saran button:disabled{opacity:.5;cursor:default}
+.saran.sent button{display:none}
+.overlay.chapter .skip{position:absolute;bottom:18px;left:0;right:0;font-size:12px;color:#8a8f9c}
+.skip kbd{font:500 11px/1 "JetBrains Mono",monospace;border:1px solid #4a5163;border-radius:4px;padding:3px 5px;color:#b5b9c4;margin-right:4px}
+.bignum{display:flex;flex-direction:column;align-items:center;gap:6px}
+.bignum b{font:900 clamp(64px,14vw,120px)/1 "Playfair Display",Georgia,serif;color:var(--accent)}
+.bignum span{font:500 14px/1.3 Inter,sans-serif;color:#a3a8b4}
+/* chapter-end newspaper clipping */
+.overlay.chapter .headline{width:min(620px,100%);background:linear-gradient(160deg,#f4ecd9,#e6d8b6);color:#1d1b16;font:900 clamp(24px,4.4vw,38px)/1.15 "Playfair Display",Georgia,serif;padding:14px 22px 20px;border-radius:4px;box-shadow:0 24px 60px rgba(0,0,0,.55);transform:rotate(-1deg);min-height:3.4em;text-wrap:balance}
+.overlay.chapter .headline::before{content:"KABAR SENDARU \00B7  EDISI KHUSUS";display:block;font:700 11px/1 Inter,sans-serif;letter-spacing:.2em;color:#7a1f1f;padding-bottom:10px;margin-bottom:12px;border-bottom:3px double #7a1f1f}
+.overlay.chapter .next{font:italic 700 16px/1.5 "Playfair Display",Georgia,serif;color:#a3a8b4;min-height:1.5em}
+.meters-end{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px}
+.mtr{display:flex;align-items:center;gap:10px;font:500 13px/1.2 Inter,sans-serif;color:#a3a8b4}
+.mtr .meter{width:120px;flex:none}
+.mtr .meter.elite i{background:#d0563f}
+.mtr b{font:900 24px/1 "Playfair Display",Georgia,serif;color:var(--ink);letter-spacing:0}
+.ledger{list-style:none;width:min(580px,100%);display:flex;flex-direction:column;gap:8px;text-align:left}
+.ledger li{display:flex;gap:10px;align-items:baseline;font-size:14px;color:#c9c5bc;line-height:1.5}
+.ledger .t{flex:none;font:600 12px/1 Inter,sans-serif;padding:4px 7px;border-radius:4px}
+.ledger .t.ev{background:rgba(127,209,139,.15);color:var(--ok)}
+.ledger .t.pr{background:rgba(242,193,78,.15);color:var(--accent)}
+.overlay.chapter .stats{border-top:1px solid #2a2e38}
+.stats-title{font:500 14px/1.3 Inter,sans-serif;color:#a3a8b4;margin-bottom:10px;text-align:center}
+@media (prefers-reduced-motion:reduce){.chap-after > *,.chap-mark{animation:none}.overlay.chapter h1::before{transition:none}}
+@media (max-width:480px){.overlay.chapter{padding:40px 14px 56px}.brief{padding:14px 16px 16px;transform:none}.mtr .meter{width:90px}}
+</style>
+</head>
+<body class="menu">
+
+<div id="hud">
+  <span id="chap"><b>Prolog</b></span>
+  <span class="hx"><span class="hl"><span class="long">Kepercayaan rakyat</span><span class="short">Percaya</span></span><span class="meter"><i id="trustBar"></i></span><span id="trustNum"><b>50</b></span></span>
+  <span class="hx hidden" id="eliteBox"><span class="hl"><span class="long">Tekanan elit</span><span class="short">Elit</span></span><span class="meter elite"><i id="eliteBar"></i></span><b id="eliteNum">0</b></span>
+  <span class="hx hidden" id="promBox"><span class="hl"><span class="long">Janji tertunda</span><span class="short">Janji</span></span><b id="promNum">0</b></span>
+  <button id="muteBtn" aria-label="Matikan suara" aria-pressed="false" title="Suara"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path class="spk" d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg></button>
+  <button id="resetBtn" class="hudBtn" aria-label="Ulang dari awal" title="Ulang dari awal"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+</div>
+
+<div id="scene" class="hall">
+  <div id="cam">
+  <div id="world">
+    <div class="stage" id="stHall"></div>
+    <div class="stage" id="stFlood"></div>
+  </div>
+  </div>
+  <div id="rain"></div>
+  <div id="vig" aria-hidden="true"></div>
+  <div id="haze" aria-hidden="true"></div>
+  <div id="feed" aria-label="Kolom komentar"><div class="feed-head"><span class="dot"></span>Kolom komentar</div><div id="feedList" aria-live="polite"></div></div>
+  <div id="bubble"><small id="who"></small><span id="say"></span></div>
+</div>
+
+<div id="panel">
+  <div id="timer"><i id="timerBar"></i></div>
+  <div id="prompt"></div>
+  <div id="opts"></div>
+  <div id="hint"></div>
+  <button type="button" id="kbdBtn">Ketuk untuk mengetik</button>
+</div>
+
+<input id="typer" type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" enterkeyhint="send" aria-label="Ketik jawaban">
+
+<div class="overlay menu" id="title">
+  <!-- cover art: 4-layer 2.5D stage (chamber + 24 rat officials built in JS + the faceless player) -->
+  <div class="cv-art" aria-hidden="true"><div class="cv-scene"><div class="cv-world" id="cvWorld">
+    <div class="cv-layer cv-far">
+              <svg id="cvFar" class="cv-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <radialGradient id="cvGlow" cx="50%" cy="35%" r="55%">
+                    <stop offset="0%" stop-color="#2e4256" stop-opacity="0.78" />
+                    <stop offset="56%" stop-color="#15202b" stop-opacity="0.42" />
+                    <stop offset="100%" stop-color="#0a0d12" stop-opacity="0" />
+                  </radialGradient>
+                </defs>
+                <rect width="1600" height="900" fill="url(#cvGlow)" />
+                <g stroke="#2c3f52" stroke-width="1.4" fill="none" opacity="0.32">
+                  <rect x="65" y="24" width="215" height="810" />
+                  <rect x="325" y="18" width="275" height="825" />
+                  <rect x="1000" y="18" width="275" height="825" />
+                  <rect x="1320" y="24" width="215" height="810" />
+                </g>
+              </svg>
+    </div>
+    <div class="cv-layer cv-midback"><svg id="cvMidBack" class="cv-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"></svg></div>
+    <div class="cv-layer cv-midfront"><svg id="cvMidFront" class="cv-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"></svg></div>
+    <div class="cv-layer cv-hero">
+              <svg class="cv-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <radialGradient id="cvHalo" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#faf7f0" stop-opacity="0.42" />
+                    <stop offset="52%" stop-color="#f5b935" stop-opacity="0.17" />
+                    <stop offset="100%" stop-color="#f5b935" stop-opacity="0" />
+                  </radialGradient>
+                  <radialGradient id="cvHead" cx="42%" cy="34%" r="64%">
+                    <stop offset="0%" stop-color="#ffffff" />
+                    <stop offset="70%" stop-color="#faf7f0" />
+                    <stop offset="100%" stop-color="#ded7c8" />
+                  </radialGradient>
+                  <linearGradient id="cvTie" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#9e2828" />
+                    <stop offset="100%" stop-color="#6d1818" />
+                  </linearGradient>
+                </defs>
+
+                <!-- Tokoh Utama diposisikan lebih tinggi (y=284) & diperbesar (scale=1.09) -->
+                <g transform="translate(800, 284) scale(1.09)">
+                  <!-- Pendar cahaya hangat di belakang kepala lingkaran putih -->
+                  <circle cx="0" cy="0" r="136" fill="url(#cvHalo)" />
+
+                  <g class="cv-breathe" stroke="#080b0f" stroke-width="3.0" stroke-linejoin="round" stroke-linecap="round">
+                    <!-- Bayangan lembut di bawah dagu kepala putih -->
+                    <ellipse cx="0" cy="60" rx="30" ry="7.5" fill="#080b0f" opacity="0.54" stroke="none" />
+
+                    <!-- Tubuh Tegak Berjas Hitam Resmi -->
+                    <path
+                      d="M-148 588 L-130 120 C-124 86 -98 68 -52 60 L0 67 L52 60 C98 68 124 86 130 120 L148 588 Z"
+                      fill="#0c0f15"
+                    />
+
+                    <!-- Sorotan rim-light putih gading di bahu jas -->
+                    <path
+                      d="M-125 116 C-118 88 -95 72 -54 64"
+                      fill="none"
+                      stroke="#f0e9da"
+                      stroke-width="2.1"
+                      opacity="0.72"
+                    />
+                    <path
+                      d="M125 116 C118 88 95 72 54 64"
+                      fill="none"
+                      stroke="#f0e9da"
+                      stroke-width="2.1"
+                      opacity="0.72"
+                    />
+
+                    <!-- Kemeja Putih Berkerah Tajam -->
+                    <polygon points="-46,58 0,198 46,58 0,52" fill="#f7f4ed" />
+                    <polygon points="-44,58 -16,81 0,67" fill="#e6dfd1" stroke-width="2" />
+                    <polygon points="44,58 16,81 0,67" fill="#e6dfd1" stroke-width="2" />
+
+                    <!-- Dasi Merah Marun (#8b2323) -->
+                    <polygon points="-11,69 11,69 7,90 -7,90" fill="url(#cvTie)" />
+                    <polygon points="-7,90 7,90 14,186 0,203 -14,186" fill="url(#cvTie)" />
+
+                    <!-- Lapel / Kerah Jas Hitam dengan Lis Editorial -->
+                    <polygon points="-50,60 -5,203 -35,214 -72,76" fill="#141923" />
+                    <polyline points="-50,60 -72,76 -35,214" fill="none" stroke="#c8c0b0" stroke-width="1.5" opacity="0.65" />
+
+                    <polygon points="50,60 5,203 35,214 72,76" fill="#141923" />
+                    <polyline points="50,60 72,76 35,214" fill="none" stroke="#c8c0b0" stroke-width="1.5" opacity="0.65" />
+
+                    <!-- Garis Lengan Jas -->
+                    <path d="M-96 136 L-104 448" fill="none" stroke="#202836" stroke-width="2.3" />
+                    <path d="M96 136 L104 448" fill="none" stroke="#202836" stroke-width="2.3" />
+
+                    <!-- KEPALA LINGKARAN PUTIH BERSIH TANPA WAJAH -->
+                    <circle cx="0" cy="0" r="54" fill="url(#cvHead)" stroke="#080b0f" stroke-width="3.3" />
+                  </g>
+                </g>
+              </svg>
+    </div>
+  </div></div>
+  <div class="cv-scrim"></div>
+  <svg class="cv-grain"><filter id="cvGrain"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#cvGrain)"/></svg>
+  </div>
+  <div class="live"><span class="dot"></span>LIVE · REPUBLIK SENDARU</div>
+  <div class="menu-body">
+    <p class="kicker">Gim mengetik tentang keberanian bersuara</p>
+    <h1 class="logo"><span>Suara</span><span>Terakhir</span></h1>
+    <div class="cv-rule" aria-hidden="true"></div>
+    <p class="tagline">Satu suara jujur melawan seluruh gedung. Setiap kata yang kamu ketik akan diucapkan, dicatat, dan ditagih.</p>
+    <div class="ballot"><div class="ballot-head" aria-hidden="true"><span>Surat suara</span><span>Pilih satu tingkat kesulitan</span></div>
+    <div class="modes" role="radiogroup" aria-label="Tingkat kesulitan">
+      <label class="mode"><input class="sr-only" type="radio" name="mode" value="santai"><span class="k">1</span><b>Santai</b><small>Tanpa batas waktu. Nikmati ceritanya.</small></label>
+      <label class="mode"><input class="sr-only" type="radio" name="mode" value="normal" checked><span class="k">2</span><b>Normal</b><small>Tiga jawaban, waktu yang longgar.</small></label>
+      <label class="mode"><input class="sr-only" type="radio" name="mode" value="sulit"><span class="k">3</span><b>Sulit</b><small>Jawaban menjebak, waktu lebih ketat.</small></label>
+    </div></div>
+    <div class="starts"><button id="startBtn" class="cta">Mulai Bermain <kbd>Enter</kbd></button><button id="contBtn" class="cta ghost hidden"></button><button id="boardBtn" class="cta ghost">Papan Skor</button></div>
+  </div>
+  <p class="credit">Prolog, 8 bab, dan satu bab tersembunyi · Musik: Kevin MacLeod (incompetech.com), lisensi CC BY 4.0</p>
+  <div class="ticker" aria-hidden="true"><span class="tag">BERITA TERKINI</span><div class="track"><div class="run" id="tickerRun"></div></div></div>
+</div>
+
+<div class="overlay menu hidden" id="nameCard">
+  <div class="idcard" role="form" aria-labelledby="idTitle">
+    <div class="id-head"><span class="emblem" aria-hidden="true"></span><div><small>Republik Sendaru</small><b id="idTitle">Kartu Tanda Anggota Dewan</b></div></div>
+    <div class="id-body">
+      <div class="photo" aria-hidden="true"><div class="ph"></div><div class="pb"></div></div>
+      <div class="fields">
+        <label class="flabel" for="nameInput">Nama lengkap</label>
+        <input class="field" id="nameInput" maxlength="24" placeholder="Ketik namamu" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-describedby="nameErr nameHelp">
+        <div class="err" id="nameErr" role="alert"></div>
+        <span class="flabel" id="sapaLbl">Sapaan</span>
+        <div class="seg" role="radiogroup" aria-labelledby="sapaLbl">
+          <label><input class="sr-only" type="radio" name="sapa" value="L" checked><span>Bapak</span></label>
+          <label><input class="sr-only" type="radio" name="sapa" value="P"><span>Ibu</span></label>
+        </div>
+        <div class="sign">
+          <div class="sign-head"><span class="flabel" id="signLbl">Tanda tangan</span><button type="button" id="signClear" class="sign-clear" hidden>Hapus</button></div>
+          <canvas id="signPad" role="img" aria-labelledby="signLbl" aria-describedby="signHint"></canvas>
+          <span class="sign-hint" id="signHint">Tulis dengan mouse, trackpad, atau jari</span>
+        </div>
+        <label class="chk"><input type="checkbox" id="skipProlog"> Lewati tutorial (Prolog)</label>
+      </div>
+    </div>
+    <div class="id-foot"><span id="nameHelp">Awali setiap kata pada nama dengan huruf kapital.</span><button id="nameBtn" class="cta small">Lanjut <kbd>Enter</kbd></button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="card"></div>
+
+<div class="overlay hidden" id="board" role="dialog" aria-modal="true" aria-labelledby="lbTitle">
+  <div class="lb">
+    <div class="lb-head"><div><small>Republik Sendaru · Pengumuman Dewan</small><h2 id="lbTitle">Papan Skor</h2>
+      <p>Hanya anggota dewan yang menamatkan seluruh bab. Satu baris per nama, hasil terbaiknya.</p></div>
+      <button type="button" class="lb-x" id="lbClose" aria-label="Tutup papan skor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="lb-tabs" role="tablist" aria-label="Jenis peringkat">
+      <button type="button" role="tab" id="lbTabSkor" aria-selected="true" aria-controls="lbList" data-tab="skor">Skor Akhir</button>
+      <button type="button" role="tab" id="lbTabKpm" aria-selected="false" aria-controls="lbList" data-tab="kpm" tabindex="-1">Tercepat</button>
+    </div>
+    <div class="lb-body" id="lbList" role="tabpanel" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="confirmBox" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+  <div class="dialog">
+    <h2 id="confirmTitle">Ulang dari awal?</h2>
+    <p id="confirmText">Progres permainan saat ini akan hilang.</p>
+    <div class="dialog-actions">
+      <button id="confirmNo">Batal</button>
+      <button id="confirmYes" class="danger">Ya, ulang</button>
+    </div>
+  </div>
+</div>
+
+<script src="adegan.js"></script>
+<script src="cerita.js"></script>
+<script>
+// =====================================================================
+// AUDIO
+// Music and SFX are synthesized with Web Audio, so the game runs with no files.
+// Drop real files in to override:
+//   audio/bgm/<judul|aula|banjir|akhir_baik|akhir_buruk>.mp3  (looped backsound)
+//   audio/vo/narator/<id>.mp3                                (narrator / pembawa acara)
+//   audio/vo/pemain_l/<id>.mp3 and audio/vo/pemain_p/<id>.mp3 (player voice, male / female)
+// See NASKAH-VO.md for every id and its text.
+// =====================================================================
+const A = { ctx:null, master:null, music:null, sfx:null, noise:null, on:true, cur:null, curName:null, vo:null };
+const fileCache = {};
+function hasFile(url){
+  // some hosts answer a missing file with their index page (200, text/html), so HTML never counts as the file
+  if (!(url in fileCache)) fileCache[url] = fetch(url, {method:"HEAD"})
+    .then(r => r.ok && !(r.headers.get("content-type") || "").startsWith("text/html")).catch(() => false);
+  return fileCache[url];
+}
+function audioInit(){
+  if (A.ctx) return;
+  const ctx = A.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  A.master = ctx.createGain(); A.master.connect(ctx.destination);
+  A.music = ctx.createGain(); A.music.gain.value = .7; A.music.connect(A.master);
+  A.sfx = ctx.createGain(); A.sfx.gain.value = .8; A.sfx.connect(A.master);
+  const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  A.noise = buf;
+  loadCam();
+}
+function now(){ return A.ctx.currentTime; }
+function noiseSrc(loop){ const s = A.ctx.createBufferSource(); s.buffer = A.noise; s.loop = !!loop; return s; }
+function filt(type, f, q){ const b = A.ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q) b.Q.value = q; return b; }
+function gainN(v){ const g = A.ctx.createGain(); g.gain.value = v; return g; }
+
+// keyboard click: short filtered noise + tiny thump; wrong keys sound duller
+function click(vol = 1, wrong = false){
+  if (!A.ctx) return;
+  const t = now();
+  const s = noiseSrc(), f = filt("bandpass", wrong ? 700 : 1800 + Math.random() * 1800, 2.5), g = gainN(0);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.45 * vol, t + .002); g.gain.exponentialRampToValueAtTime(.0001, t + .05);
+  s.connect(f).connect(g).connect(A.sfx); s.start(t, Math.random() * 1.5, .06);
+  const o = A.ctx.createOscillator(), og = gainN(0);
+  o.frequency.setValueAtTime(wrong ? 90 : 170, t); o.frequency.exponentialRampToValueAtTime(60, t + .04);
+  og.gain.setValueAtTime(.22 * vol, t); og.gain.exponentialRampToValueAtTime(.0001, t + .05);
+  o.connect(og).connect(A.sfx); o.start(t); o.stop(t + .06);
+}
+// Robot "speech" babble: one short syllable through random vowel formants (a, i, u, e, o).
+// Every character speaks this way; only pitch, wave and loudness differ (see VOICES).
+const VOWELS = [[800, 1200], [350, 2300], [300, 800], [500, 1900], [450, 900]];
+function babble(base, wave = "square", vol = .9){
+  if (!A.ctx) return;
+  const t = now(), f0 = base * (.88 + Math.random() * .35);
+  const o = A.ctx.createOscillator(); o.type = wave;
+  o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * 1.12, t + .06);
+  const g = gainN(0);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + .085);
+  const [f1, f2] = pick(VOWELS);
+  [f1, f2].forEach((f, i) => { const bp = filt("bandpass", f, 3); const bg = gainN(i ? .5 : 1); o.connect(bp).connect(bg).connect(g); });
+  g.connect(A.sfx); o.start(t); o.stop(t + .1);
+}
+function applause(sec = 3){
+  if (!A.ctx) return;
+  const t0 = now();
+  for (let i = 0; i < sec * 45; i++){
+    const t = t0 + Math.random() * sec, env = Math.sin(Math.PI * (t - t0) / sec);
+    const s = noiseSrc(), f = filt("bandpass", 1200 + Math.random() * 2500, 1.5), g = gainN(0);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12 * env + .0002, t + .003); g.gain.exponentialRampToValueAtTime(.0001, t + .04);
+    s.connect(f).connect(g).connect(A.sfx); s.start(t, Math.random() * 1.5, .05);
+  }
+}
+// audio/sfx/kamera.mp3 is a burst of 17 shutter clicks; these are the click start times (seconds)
+const CAM_CLICKS = [.12,.36,.61,.85,1.09,1.32,1.55,1.79,2.05,2.33,2.59,2.84,3.09,3.33,3.60,3.86,4.10];
+let camBuf = null;
+function loadCam(){
+  fetch("audio/sfx/kamera.mp3").then(r => r.ok ? r.arrayBuffer() : null)
+    .then(b => b && A.ctx.decodeAudioData(b)).then(buf => { if (buf) camBuf = buf; }).catch(() => {});
+}
+function shutter(){
+  if (!A.ctx) return;
+  if (!camBuf){ click(.8); setTimeout(() => click(.5), 60); return; }
+  const s = A.ctx.createBufferSource(), g = gainN(.45);
+  s.buffer = camBuf; s.playbackRate.value = 1.5; s.connect(g).connect(A.sfx); // sped up: snappier shutter
+  s.start(now(), Math.max(0, pick(CAM_CLICKS) - .01), .22);
+}
+function thunder(vol = .5){
+  if (!A.ctx) return;
+  const t = now(), s = noiseSrc(), f = filt("lowpass", 260), g = gainN(0);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .08); g.gain.exponentialRampToValueAtTime(.0001, t + 3);
+  s.connect(f).connect(g).connect(A.music); s.start(t, 0, 3.2);
+  const sc = $("scene"); sc.classList.add("lightning"); setTimeout(() => sc.classList.remove("lightning"), 120);
+}
+
+// ---- synthesized backsound ----
+function pad(dest, freq, t, dur, o){
+  const {type = "sawtooth", cutoff = 900, vol = .05, atk = 1.2, rel = 1.8} = o;
+  const f = filt("lowpass", cutoff), g = gainN(0);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + atk);
+  g.gain.setValueAtTime(vol, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + rel);
+  [1, 1.006].forEach(m => { const os = A.ctx.createOscillator(); os.type = type; os.frequency.value = freq * m; os.connect(f); os.start(t); os.stop(t + dur + rel + .1); });
+  f.connect(g).connect(dest);
+}
+function chordLoop(dest, chords, every, o){
+  let i = 0;
+  const tick = () => { const t = now() + .05; chords[i++ % chords.length].forEach(fq => pad(dest, fq, t, every - .4, o)); };
+  tick(); const id = setInterval(tick, every * 1000);
+  return () => clearInterval(id);
+}
+function bell(dest, freq, vol = .05){
+  const t = now(), o = A.ctx.createOscillator(), g = gainN(0);
+  o.type = "sine"; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + 2.5);
+  o.connect(g).connect(dest); o.start(t); o.stop(t + 2.6);
+}
+function noiseBed(dest, type, f, vol, q){
+  const s = noiseSrc(true), fl = filt(type, f, q), g = gainN(vol);
+  s.connect(fl).connect(g).connect(dest); s.start();
+  return { stop: () => s.stop(), gain: g, filter: fl };
+}
+// one water drop: a short sine whose pitch rises, like a bubble closing, panned at random
+function droplet(dest, vol){
+  const t = now(), o = A.ctx.createOscillator(), g = gainN(0), p = A.ctx.createStereoPanner();
+  const f = 700 + Math.random() * 900;
+  o.type = "sine"; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.7, t + .05);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + .09);
+  p.pan.value = Math.random() * 1.6 - .8;
+  o.connect(g).connect(p).connect(dest); o.start(t); o.stop(t + .1);
+}
+const SCENES = {
+  judul(dest){ // somber minor pad + sparse bells
+    const s1 = chordLoop(dest, [[110,130.8,164.8],[87.3,110,130.8],[65.4,98,130.8],[98,123.5,146.8]], 6, {cutoff:600, vol:.05});
+    const notes = [440, 523.3, 587.3, 659.3, 784];
+    const id = setInterval(() => { if (Math.random() < .55) bell(dest, notes[Math.random() * notes.length | 0], .035); }, 2400);
+    return () => { s1(); clearInterval(id); };
+  },
+  aula(dest){ // ceremonial warm chords
+    return chordLoop(dest, [[130.8,164.8,196],[110,130.8,164.8],[87.3,110,130.8],[98,123.5,146.8]], 7, {type:"triangle", cutoff:1200, vol:.05});
+  },
+  banjir(dest){ // tense minor drone
+    const dr = A.ctx.createOscillator(), dg = gainN(.04), trem = A.ctx.createOscillator(), tg = gainN(.02);
+    dr.frequency.value = 73.4; trem.frequency.value = .5; trem.connect(tg).connect(dg.gain); dr.connect(dg).connect(dest); dr.start(); trem.start();
+    const s1 = chordLoop(dest, [[146.8,174.6,220],[116.5,146.8,174.6],[130.8,155.6,196],[110,138.6,164.8]], 8, {cutoff:500, vol:.035});
+    return () => { dr.stop(); trem.stop(); s1(); };
+  },
+  akhir_baik(dest){ return chordLoop(dest, [[130.8,164.8,196,261.6],[98,123.5,146.8,196],[110,130.8,164.8,220],[87.3,110,130.8,174.6]], 4, {type:"triangle", cutoff:1500, vol:.045}); },
+  akhir_buruk(dest){ return chordLoop(dest, [[110,130.8,164.8],[82.4,103.8,123.5],[87.3,110,130.8],[82.4,98,123.5]], 6, {cutoff:500, vol:.05}); }
+};
+// Location ambience, always synthesized so it plays on top of either music source.
+const AMBIENCE = {
+  aula(dest){ // crowd murmur
+    const m = noiseBed(dest, "bandpass", 450, .05, .7);
+    const lfo = A.ctx.createOscillator(), lg = gainN(.03); lfo.frequency.value = .23; lfo.connect(lg).connect(m.gain.gain); lfo.start();
+    return () => { m.stop(); lfo.stop(); };
+  },
+  banjir(dest){ // calm rain: soft rain body, trickling water, drops, rare far-off thunder
+    // rain body: dark, quiet noise that slowly swells and settles
+    const body = noiseBed(dest, "lowpass", 1600, .06);
+    const swell = A.ctx.createOscillator(), sg = gainN(.02); swell.frequency.value = .07; swell.connect(sg).connect(body.gain.gain); swell.start();
+    // trickle: a narrow band of noise whose centre wobbles quickly, like water running off a tent
+    const tr = noiseBed(dest, "bandpass", 1150, .09, 7);
+    const w1 = A.ctx.createOscillator(), w1g = gainN(260), w2 = A.ctx.createOscillator(), w2g = gainN(140);
+    w1.frequency.value = 3.1; w2.frequency.value = 7.7;
+    w1.connect(w1g).connect(tr.filter.frequency); w2.connect(w2g).connect(tr.filter.frequency); w1.start(); w2.start();
+    const drops = setInterval(() => { if (Math.random() < .35) droplet(dest, .025 + Math.random() * .03); }, 130);
+    let alive = true, next;
+    const boom = () => { if (!alive) return; thunder(.15); next = setTimeout(boom, 40000 + Math.random() * 30000); };
+    next = setTimeout(boom, 25000);
+    return () => { alive = false; clearTimeout(next); clearInterval(drops); [swell, w1, w2].forEach(o => o.stop()); body.stop(); tr.stop(); };
+  },
+  posko(dest){ // tired crowd + generator hum
+    const m = noiseBed(dest, "bandpass", 380, .04, .8);
+    const hum = A.ctx.createOscillator(), hg = gainN(.012); hum.type = "sawtooth"; hum.frequency.value = 50;
+    hum.connect(filt("lowpass", 200)).connect(hg).connect(dest); hum.start();
+    return () => { m.stop(); hum.stop(); };
+  },
+  siniar(dest){ // quiet room tone
+    const r = noiseBed(dest, "lowpass", 300, .025);
+    return () => r.stop();
+  },
+  asap(dest){ // dry wind + crackling fire
+    const w = noiseBed(dest, "bandpass", 500, .06, .4);
+    const lfo = A.ctx.createOscillator(), lg = gainN(.04); lfo.frequency.value = .12; lfo.connect(lg).connect(w.gain.gain); lfo.start();
+    const id = setInterval(() => { if (Math.random() < .6) click(.25 + Math.random() * .3, true); }, 140);
+    return () => { w.stop(); lfo.stop(); clearInterval(id); };
+  },
+  fitnah(dest){ // late-night room + endless notification pings
+    const r = noiseBed(dest, "lowpass", 250, .02);
+    const id = setInterval(() => { if (Math.random() < .5) bell(dest, pick([1318.5, 1568, 1760]), .025); }, 900);
+    return () => { r.stop(); clearInterval(id); };
+  },
+  debat(dest){ // studio air conditioning
+    const r = noiseBed(dest, "bandpass", 900, .02, .5);
+    return () => r.stop();
+  },
+  sidang(dest){ // big chamber murmur
+    const m = noiseBed(dest, "bandpass", 420, .06, .6);
+    const lfo = A.ctx.createOscillator(), lg = gainN(.035); lfo.frequency.value = .3; lfo.connect(lg).connect(m.gain.gain); lfo.start();
+    return () => { m.stop(); lfo.stop(); };
+  },
+  siaran(dest){ // crowd far outside the studio window
+    const m = noiseBed(dest, "bandpass", 300, .045, .9);
+    const lfo = A.ctx.createOscillator(), lg = gainN(.03); lfo.frequency.value = .5; lfo.connect(lg).connect(m.gain.gain); lfo.start();
+    return () => { m.stop(); lfo.stop(); };
+  }
+};
+const BGM_ALIAS = { posko:"judul", siniar:"akhir_baik", asap:"banjir", fitnah:"akhir_buruk", debat:"aula", sidang:"banjir", siaran:"judul" };
+// gavel knock for the council session
+function gavel(n = 2){
+  if (!A.ctx) return;
+  for (let i = 0; i < n; i++){
+    const t = now() + i * .28, o = A.ctx.createOscillator(), g = gainN(0);
+    o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(70, t + .08);
+    g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.0001, t + .12);
+    o.connect(g).connect(A.sfx); o.start(t); o.stop(t + .15);
+    const s = noiseSrc(), f = filt("bandpass", 1400, 1.2), ng = gainN(0);
+    ng.gain.setValueAtTime(.3, t); ng.gain.exponentialRampToValueAtTime(.0001, t + .05);
+    s.connect(f).connect(ng).connect(A.sfx); s.start(t, Math.random(), .06);
+  }
+}
+async function music(name){
+  if (!A.ctx || A.curName === name) return;
+  A.curName = name;
+  if (A.cur){ const old = A.cur; old.g.gain.cancelScheduledValues(now()); old.g.gain.setValueAtTime(old.g.gain.value, now()); old.g.gain.linearRampToValueAtTime(0, now() + 1.5); setTimeout(old.stop, 1700); }
+  const g = gainN(0); g.connect(A.music); g.gain.linearRampToValueAtTime(1, now() + 2);
+  let stopMusic;
+  const stopAmb = AMBIENCE[name] ? AMBIENCE[name](g) : () => {};
+  // a location without its own file borrows one of the existing tracks (drop audio/bgm/<name>.mp3 in to override)
+  let url = `audio/bgm/${name}.m4a`;
+  if (!(await hasFile(url)) && BGM_ALIAS[name]) url = `audio/bgm/${BGM_ALIAS[name]}.m4a`;
+  if (A.curName !== name){ stopAmb(); g.disconnect(); return; } // another track was requested while checking files
+  if (await hasFile(url)){
+    const el = new Audio(url); el.loop = true;
+    const fg = gainN(.45); // recorded tracks are much louder than the synth pads
+    A.ctx.createMediaElementSource(el).connect(fg).connect(g); el.play().catch(() => {});
+    stopMusic = () => release(el);
+  } else stopMusic = SCENES[BGM_ALIAS[name] || name](g);
+  A.cur = { g, stop: () => { stopMusic(); stopAmb(); } };
+}
+// Stops a media element and frees its network connection.
+// Paused <audio> elements keep their connection open, and browsers allow only a few per host,
+// so without this the game stops loading files after several tracks.
+function release(el){ el.pause(); el.removeAttribute("src"); el.load(); }
+function duck(on){
+  if (!A.ctx) return;
+  A.music.gain.cancelScheduledValues(now());
+  A.music.gain.setValueAtTime(A.music.gain.value, now());
+  A.music.gain.linearRampToValueAtTime(on ? .25 : .7, now() + .3);
+}
+// Babble voice per character folder: base pitch (Hz), oscillator wave, loudness.
+// Triangle sounds softer than square, so it gets a little more gain.
+const VOICES = {
+  narator:   {f:150, w:"triangle", v:1.2},  // pembawa acara and narrator: calm, round
+  nadia:     {f:255, w:"square",   v:.8},   // young journalist
+  darsono:   {f:92,  w:"sawtooth", v:.7},   // old power broker: low and gravelly
+  pejabat:   {f:118, w:"sawtooth", v:.7},
+  laras:     {f:235, w:"triangle", v:1.2},  // whispering civil servant
+  bram:      {f:165, w:"square",   v:.9},
+  dimas:     {f:178, w:"square",   v:.8},
+  bupati:    {f:112, w:"square",   v:.8},
+  moderator: {f:270, w:"triangle", v:1.1},
+  hendra:    {f:128, w:"sawtooth", v:.7},
+  ketua:     {f:102, w:"triangle", v:1.2},
+  anggota:   {f:138, w:"sawtooth", v:.7}
+};
+// Residents, callers and social media accounts: each speaker name keeps its own pitch.
+function crowdVoice(who){
+  let h = 0; for (const c of who) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return {f:120 + h % 150, w:h % 2 ? "square" : "triangle", v:h % 2 ? .8 : 1.1};
+}
+const blipFor = (folder, who = "") => {
+  const p = VOICES[folder] || crowdVoice(who);
+  return () => babble(p.f, p.w, p.v);
+};
+// Plays the player's voice file if present. Resolves to its duration in seconds (or null when the file is missing).
+const VO_VOL = { pemain_l:.6, pemain_p:.6 };
+async function voice(folder, id){
+  if (!A.ctx) return null;
+  let url = null;
+  for (const ext of ["mp3", "m4a"]){
+    const u = `audio/vo/${folder}/${id}.${ext}`;
+    if (await hasFile(u)){ url = u; break; }
+  }
+  if (!url) return null;
+  return new Promise(res => {
+    const el = new Audio(url); A.vo = el;
+    A.ctx.createMediaElementSource(el).connect(gainN(VO_VOL[folder] ?? .6)).connect(A.master);
+    el.onloadedmetadata = () => { duck(true); el.play().catch(() => {}); res(el.duration); };
+    el.onended = () => { duck(false); release(el); };
+    el.onerror = () => res(null);
+  });
+}
+
+// =====================================================================
+// SCENE BUILDING (2.5D: each element sits at its own depth via translateZ)
+// =====================================================================
+const $ = id => document.getElementById(id);
+function el(parent, cls, style, html){
+  const d = document.createElement("div"); d.className = cls; if (style) d.setAttribute("style", style); if (html) d.innerHTML = html;
+  parent.appendChild(d); return d;
+}
+// me: the player character (gets the player's first name as its tag)
+function person(parent, {x, y, z = 0, s = 1, c, skin, back, seat, umb, cam, mic, tag, hero, id, me, mask, helmet, sign, peci, hijab}){
+  const cls = "p" + (back ? " back" : "") + (seat ? " seat" : "") + (hero ? " hero" : "") + (me ? " me" : "") + (peci ? " peci" : "") + (hijab ? " hijab" : "");
+  let html = `<div class="h"></div><div class="b"></div>`;
+  if (mask) html += `<span class="mask"></span>`;
+  if (helmet) html += `<span class="helm"></span>`;
+  if (sign) html += `<span class="sign">${sign}</span>`;
+  if (umb) html += `<span class="u" style="--uc:${umb}"></span>`;
+  if (cam) html += `<span class="cam"></span>`;
+  if (mic) html += `<span class="mc"></span>`;
+  if (tag !== undefined) html += `<span class="tag">${tag}</span>`;
+  const p = el(parent, cls, `left:${x}%;bottom:${y}%;transform:translateZ(${z}px) scale(${s});--c:${c || "#2b2f3a"};--skin:${skin || "#c99a74"}${hijab ? ";--hj:" + hijab : ""}`, html);
+  if (id) p.id = id;
+  return p;
+}
+const SKINS = ["#c99a74", "#b07f5e", "#8d5f43", "#d9ae8a", "#a3704f"];
+const SUITS = ["#20242e", "#2b2f3a", "#1d2a24", "#33281f", "#26203a"];
+const pick = a => a[Math.random() * a.length | 0];
+
+function buildHall(){
+  const st = $("stHall");
+  // layer 1: dusk sky through tall arched windows, seen past the edges of the back wall
+  el(st, "abs hl-sky", "transform:translateZ(-340px)");
+  el(st, "abs hl-ribs", "transform:translateZ(-338px)");
+  [3, 15, 76, 88].forEach(x => el(st, "abs hl-win", `left:${x}%;transform:translateZ(-335px)`));
+  // layer 2: teak wall with the state emblem, two portraits, warm sconces, flags and the red stage curtains
+  el(st, "abs hl-wall", "transform:translateZ(-240px)");
+  [22, 76].forEach(x => el(st, "abs hl-pil", `left:${x}%;transform:translateZ(-238px)`));
+  el(st, "abs hl-emblem", "transform:translateZ(-236px)", `<span class="ray"></span><span class="wr"></span><span class="sh"></span><span class="sc"></span>`);
+  [31, 65].forEach(x => el(st, "abs hl-foto", `left:${x}%;transform:translateZ(-236px)`));
+  [18, 81].forEach(x => el(st, "abs hl-sconce", `left:${x}%;transform:translateZ(-234px)`));
+  [24, 74].forEach(x => el(st, "abs hl-flag", `left:${x}%;transform:translateZ(-200px)`, "<i></i>"));
+  el(st, "abs hl-curtain l", "transform:translateZ(-170px)");
+  el(st, "abs hl-curtain r", "transform:translateZ(-170px)");
+  el(st, "abs hl-tie", "left:3.5%;transform:translateZ(-168px)");
+  el(st, "abs hl-tie", "right:3.5%;transform:translateZ(-168px)");
+  el(st, "abs hl-rod", "transform:translateZ(-166px)");
+  // layer 3: the stage. A few large figures: two senior officials, the player at the podium, a member, a TV cameraman
+  el(st, "abs hl-floor", "transform:translateZ(-160px)");
+  el(st, "abs hl-carpet", "transform:translateZ(-150px)");
+  el(st, "abs hl-spot", "transform:translateZ(-130px)");
+  el(st, "abs hl-dais", "transform:translateZ(-110px)");
+  el(st, "abs hl-pool", "transform:translateZ(-90px)");
+  person(st, {x:21, y:6, z:-80, s:1.3, c:"#181b22", skin:"#b88b68", peci:true}).style.setProperty("--tie", "#4a1818");
+  const dar = person(st, {x:33, y:6, z:-60, s:1.35, c:"#3a2450", skin:"#c2926e", tag:"Darsono", peci:true});
+  dar.insertAdjacentHTML("beforeend", `<span class="buku"></span>`);
+  person(st, {x:calcCenter(46), y:6, z:-50, s:1.15, hero:true, me:true, c:"#e9e6df", tag:"", id:"hero"});
+  el(st, "abs hl-podium", "transform:translateZ(-30px)", "<i></i><i></i><b></b>");
+  person(st, {x:63, y:6, z:-70, s:1.3, c:"#20242e", skin:"#c49672", hijab:"#5c4626"}).style.setProperty("--tie", "#5c4626");
+  const cam = person(st, {x:78, y:4, z:-10, s:1.35, cam:true, c:"#222630", skin:"#bd8f6c"});
+  cam.insertAdjacentHTML("beforeend", `<span class="tally"></span>`);
+  // layer 4: a few guests' heads at the bottom edge, a standing fan on the left, a press boom mic on the right
+  el(st, "abs hl-rail", "transform:translateZ(90px)");
+  [[21, 1.6], [28, 1.5], [64, 1.5], [71, 1.6]].forEach(([x, s]) => person(st, {x, y:-44, z:80, s, back:true}));
+  el(st, "abs kipas", "left:11%;bottom:-36%;transform:translateZ(100px) scale(1.1)", "<i></i>");
+  el(st, "abs hl-boom", "transform:translateZ(100px)", "<i></i>");
+  addFlashes(st, [[80, 30], [88, 26], [6, 28], [14, 34]]);
+}
+function buildFlood(){
+  const st = $("stFlood");
+  const R = (a, b) => a + Math.random() * (b - a);
+  // layer 1: cloudy night sky, low hills and a row of far roofs sinking into mist
+  el(st, "abs fl-sky", "transform:translateZ(-420px)");
+  el(st, "abs fl-hills", "transform:translateZ(-400px)");
+  [[2, 70], [16, 90], [33, 60], [50, 96], [68, 76], [84, 66]].forEach(([x, w]) => el(st, "abs fl-far", `left:${x}%;width:${w}px;transform:translateZ(-380px)`));
+  el(st, "abs fl-haze", "transform:translateZ(-360px)");
+  // layer 2: the kampung. Tiled houses, most windows still lit, a flood warning on the middle house,
+  // a pos ronda with a swinging bulb and two power poles with sagging wires
+  const W = (x, y, dim) => `<span class="fl-win${dim ? " dim" : ""}" style="left:${x}%;top:${y}%"></span>`;
+  const houses = [
+    [3, 130, 92, W(18, 24) + W(58, 24, 1)],
+    [21, 150, 124, W(16, 20) + W(62, 20) + W(16, 56, 1)],
+    [44, 168, 112, W(14, 12) + W(64, 12, 1) + `<span class="fl-banner">Waspada banjir</span><span class="fl-door"></span>` + W(64, 64)],
+    [70, 150, 126, W(18, 22, 1) + W(62, 22)],
+    [88, 120, 96, W(22, 26)]
+  ];
+  houses.forEach(([x, w, h, html]) => el(st, "abs fl-house", `left:${x}%;--w:${w}px;--h:${h}px;transform:translateZ(-260px)`, html));
+  el(st, "abs fl-pos", "left:8%;transform:translateZ(-200px)", `<span class="fl-bulb"></span>`);
+  [26, 79].forEach(x => el(st, "abs fl-upole", `left:${x}%;transform:translateZ(-250px)`));
+  el(st, "abs fl-wires", "transform:translateZ(-250px)", `<svg viewBox="0 0 1000 40" preserveAspectRatio="none" width="100%" height="100%"><path d="M0 6Q170 30 344 10T656 8T1000 10" fill="none" stroke="rgba(10,13,18,.8)" stroke-width="1.6"/><path d="M0 12Q170 38 344 16T656 14T1000 16" fill="none" stroke="rgba(10,13,18,.55)" stroke-width="1.2"/></svg>`);
+  // layer 3: dark flood water with the reflection of every light, one street lamp with rain drifting in its cone
+  const water = el(st, "abs water");
+  const wx = x => (x + 10) / 1.2; // stage % to water % (the water is 120% wide, starting at -10%)
+  [[6, 70], [24, 90], [30, 80], [47, 80], [73, 90], [90, 70]].forEach(([x, h]) => el(water, "abs refl", `left:${wx(x)}%;--w:9px;--h:${h}px`));
+  el(water, "abs refl", `left:${wx(33)}%;--w:22px;--h:190px;--rc:rgba(255,200,120,.55)`);
+  for (let i = 0; i < 18; i++) el(water, "abs splash", `left:${R(0, 100)}%;top:${R(2, 40)}%;animation-delay:-${R(0, 1.2).toFixed(2)}s;animation-duration:${R(.9, 1.5).toFixed(2)}s`);
+  el(st, "abs fl-lamp", "transform:translateZ(-60px)");
+  el(st, "abs fl-cone", "transform:translateZ(-58px)", Array.from({length:16}, () =>
+    `<i style="left:${R(10, 80)}%;top:${R(0, 90)}%;--d:${R(4, 7).toFixed(1)}s;animation-delay:-${R(0, 6).toFixed(1)}s"></i>`).join(""));
+  el(st, "abs log", "left:52%;bottom:8%;--lw:84px;--tilt:2deg;transform:translateZ(20px)");
+  // a few large figures: a resident with a torch, the player, Nadia with her mic, a cameraman under an umbrella
+  const wade = p => { p.classList.add("wade"); el(p, "rf"); return p; };
+  const res = wade(person(st, {x:16, y:13, z:10, s:1.25, c:"#3a5468", skin:"#c29b7e"}));
+  res.insertAdjacentHTML("beforeend", `<span class="hood"></span><span class="torch"></span>`);
+  wade(person(st, {x:41, y:12, z:30, s:1.1, hero:true, me:true, c:"#e9e6df", tag:"", id:"heroF"}));
+  wade(person(st, {x:56, y:12, z:30, s:1.1, hero:true, c:"#9c4f5a", skin:"#b07f5e", mic:true, tag:"Nadia", id:"nadia"}));
+  const cam = wade(person(st, {x:73, y:12, z:40, s:1.3, cam:true, umb:"#2a3443", c:"#3a4352", skin:"#b89074"}));
+  cam.querySelector(".u").style.cssText += ";top:-36px;rotate:10deg;box-shadow:inset 0 1px 0 rgba(154,182,216,.35),0 6px 12px rgba(0,0,0,.45)";
+  cam.querySelector(".cam").classList.add("on");
+  cam.insertAdjacentHTML("beforeend", `<span class="tally"></span>`);
+  // layer 4, slightly out of focus: a sandbag wall, the flood gauge and three dark onlookers at the bottom edge
+  const fg = el(st, "abs fl-fg", "left:0;right:0;top:0;bottom:0;transform:translateZ(110px)");
+  [[2, -42], [10, -42], [18, -42], [6, -34], [14, -34], [10, -26]].forEach(([x, y]) => el(fg, "abs fl-bag", `left:${x}%;bottom:${y}%`));
+  el(fg, "abs fl-gauge", "right:13%;bottom:-44%", `<b class="d">160</b><b class="d">140</b><b>120</b><b>100</b>`);
+  [[24, 100], [62, 92], [88, 112]].forEach(([x, h]) => el(fg, "abs fl-sil", `left:${x}%;bottom:-62%;height:${h}px`));
+  addFlashes(st, [[74, 30], [80, 34], [70, 26]]);
+}
+function calcCenter(){ return 47; }
+function addFlashes(st, spots){ spots.forEach(([x, y]) => el(st, "flash", `left:${x}%;bottom:${y}%;transform:translateZ(40px)`)); }
+function flashes(n = 3){
+  const list = [...document.querySelectorAll("#scene .stage:not([style*='none']) .flash")].filter(f => f.offsetParent);
+  for (let i = 0; i < n; i++) setTimeout(() => {
+    const f = pick(list); if (!f) return;
+    f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); shutter();
+  }, i * 150 + Math.random() * 70);
+}
+// extra: state classes such as "feedOn" (social-media phone) or "hot" (Bab 5 red tint)
+function setScene(name, extra = ""){ $("scene").className = (name + " " + extra).trim(); }
+
+// ---- stage entrance and exit ----
+// Uses inline transitions on the individual translate and opacity properties, so they compose with each figure's
+// inline translateZ()/scale() and never touch the `animation` that .p.talk uses.
+const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const liveStage = () => [...document.querySelectorAll("#world .stage")].find(s => getComputedStyle(s).display !== "none");
+function stageRoles(st){
+  const W = $("scene").clientWidth;
+  return [...st.querySelectorAll(".p")].map(p => {
+    const x = parseFloat(p.style.left) || 0, left = x < 50;
+    const role = p.classList.contains("back") ? "front" : p.classList.contains("me") ? (p.classList.contains("seat") ? "seated" : "hero")
+      : p.querySelector(".cam") ? "crew" : (p.id || p.classList.contains("hero")) ? "lead" : "extra";
+    return {p, role, x, left, W};
+  });
+}
+function setT(p, translate, opacity, dur = 0, delay = 0){
+  p.style.transition = dur ? `translate ${dur}s cubic-bezier(.25,.7,.25,1) ${delay}s,opacity ${Math.min(dur, .5)}s ease ${delay}s` : "none";
+  p.style.translate = translate; p.style.opacity = opacity;
+}
+// before the opening card closes: everyone waits off their marks
+function stageWait(){
+  document.querySelectorAll("#world .stage").forEach(s => { delete s.dataset.out; stageReset(s); });
+  S.enterPending = !calm();
+  if (!S.enterPending) return;
+  const st = liveStage(); if (!st) return;
+  stageRoles(st).forEach(({p, role, x, left, W}) => {
+    const side = left ? -1 : 1;
+    if (role === "hero") setT(p, `${-(W * x / 100 + 160)}px 0`, "1");
+    else if (role === "front") setT(p, "0 110px", "1");
+    else if (role === "crew") setT(p, `${side * 140}px 0`, "0");
+    else setT(p, `${side * 30}px 0`, "0");
+  });
+  void st.offsetWidth;
+}
+// 1.5 s in all: the player walks in, then the people they talk to, the press, and the crowd in front
+function stageEnter(){
+  if (!S.enterPending) return; S.enterPending = false;
+  const st = liveStage(); if (!st) return;
+  stageRoles(st).forEach(({p, role}) => {
+    if (role === "hero"){ setT(p, "0 0", "1", 1, 0); p.classList.add("walking"); }
+    else if (role === "seated" || role === "lead") setT(p, "0 0", "1", .7, .25 + Math.random() * .2);
+    else if (role === "extra") setT(p, "0 0", "1", .6, .3 + Math.random() * .3);
+    else if (role === "crew") setT(p, "0 0", "1", .7, .5);
+    else setT(p, "0 0", "1", .6, .65 + Math.random() * .2);
+  });
+  setTimeout(() => stageReset(st), 1550);
+}
+function stageReset(st){
+  st.querySelectorAll(".p").forEach(p => { p.classList.remove("walking"); p.style.transition = p.style.translate = p.style.opacity = ""; });
+}
+// about 1 s: the crowd in front sinks, the others step aside, the player walks out to the right. Runs once per stage.
+async function stageExit(){
+  const st = liveStage();
+  if (!st || st.dataset.out || calm()) return;
+  st.dataset.out = "1";
+  stageRoles(st).forEach(({p, role, x, left, W}) => {
+    const side = left ? -1 : 1;
+    if (role === "front") setT(p, "0 110px", "1", .45, 0);
+    else if (role === "hero"){ setT(p, `${W * (100 - x) / 100 + 160}px 0`, "1", .8, .2); p.classList.add("walking"); }
+    else if (role === "crew") setT(p, `${side * 140}px 0`, "0", .5, .15);
+    else setT(p, `${side * 40}px 0`, "0", .5, .15 + Math.random() * .25);
+  });
+  await wait(1050);
+}
+
+// ---- cursor camera: desktop with a mouse or trackpad only (not phones, not iPad) ----
+(() => {
+  if (!matchMedia("(hover: hover) and (pointer: fine)").matches || navigator.maxTouchPoints > 0) return;
+  const cam = $("cam"); let tx = 0, ty = 0, cx = 0, cy = 0, run = false;
+  const tick = () => {
+    cx += (tx - cx) * .08; cy += (ty - cy) * .08;
+    cam.style.transform = `rotateY(${cx.toFixed(3)}deg) rotateX(${cy.toFixed(3)}deg)`;
+    if (Math.abs(tx - cx) > .01 || Math.abs(ty - cy) > .01) requestAnimationFrame(tick); else run = false;
+  };
+  const go = () => { if (!run){ run = true; requestAnimationFrame(tick); } };
+  addEventListener("pointermove", e => {
+    if (e.pointerType !== "mouse" || calm()) return;
+    tx = (e.clientX / innerWidth - .5) * 8; ty = -(e.clientY / innerHeight - .5) * 5; go();
+  });
+  document.documentElement.addEventListener("mouseleave", () => { tx = ty = 0; go(); });
+})();
+function talk(node){
+  document.querySelectorAll(".p.speaking").forEach(p => p.classList.remove("speaking"));
+  if (!node) return;
+  node.classList.add("speaking");
+  node.classList.remove("talk"); void node.offsetWidth; node.classList.add("talk");
+}
+
+// =====================================================================
+// TEXT ANIMATION
+// =====================================================================
+// ev: evidence keys (see EVIDENCE), promises: ids of promises not yet kept (see PROMISES),
+// safe: how often the player chose a safe / compromise answer (unlocks the hidden ending), sold: accepted Darsono's offer
+const S = { done:new Set(), trust:50, elite:0, cps:3, relaxed:false, mode:"normal", ev:new Set(), promises:[], safe:0, sold:false, flags:{}, allies:0,
+            typed:"", targets:[], tags:[], onSubmit:null, timer:null, skip:false, typing:false,
+            name:"", first:"", sapa:"L" };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+// Types text into node. With a voice duration, the speed follows the recording.
+async function typeOut(node, text, {cps = 32, vol = .5, dur = null, blip = null} = {}){
+  const rate = dur ? text.length / Math.max(.5, dur * .9) : cps;
+  node.classList.add("caret");
+  for (let i = 0; i < text.length; i++){
+    if (S.skip){ node.textContent = text; break; }
+    node.textContent = text.slice(0, i + 1);
+    if (blip){ if (i % 2 === 0 && /\p{L}/u.test(text[i])) blip(); } // one syllable every 2 letters
+    else if (text[i] !== " ") click(vol);
+    let ms = 1000 / rate;
+    if (!dur && ".,?!:".includes(text[i])) ms += 160;
+    await wait(ms);
+  }
+  node.classList.remove("caret");
+}
+async function say(who, text, node, {vo = null, folder = "narator"} = {}){
+  const player = folder.startsWith("pemain");
+  // "Dimas · Ngobrol Jujur": the name gets the accent, the role stays quiet
+  const [nm, ...role] = who.split(" · "); const w = $("who"); w.textContent = role.join(" · ");
+  const nb = document.createElement("b"); nb.textContent = nm; w.prepend(nb);
+  const sp = $("say"); sp.textContent = "";
+  $("bubble").classList.toggle("me", player);
+  $("bubble").classList.add("show"); talk(node);
+  S.typing = true; S.skip = false;
+  // only the player's lines can come from a recording; everyone else babbles
+  const dur = player && vo ? await voice(folder, vo) : null;
+  const blip = dur ? null : player ? () => babble(S.sapa === "L" ? 130 : 230) : blipFor(folder, who);
+  await typeOut(sp, text, {cps: blip ? 26 : 38, vol:.3, dur, blip});
+  S.typing = false;
+}
+
+// Full-screen chapter card. parts are typed one after another.
+// With vo set, the narrator babbles from part voFrom on (vo is only a marker; no file is played).
+// mark: large outlined numeral behind the title (chapter number), purely decorative.
+// alt: label of a second button (Esc); the card then resolves with "alt" instead of undefined.
+function card({parts, after = "", btn, vo, voFrom = 0, mark = "", alt = ""}){
+  return new Promise(async res => {
+    const c = $("card"); c.className = "overlay chapter";
+    c.innerHTML = `<div class="chap">${mark !== "" ? `<div class="chap-mark" aria-hidden="true">${mark}</div>` : ""}</div>`;
+    const box = c.firstChild;
+    const nodes = parts.map(p => { const n = document.createElement(p.tag); if (p.cls) n.className = p.cls; box.appendChild(n); return n; });
+    const skipHint = el(c, "skip", "", "<kbd>Enter</kbd> untuk mempercepat");
+    S.typing = true; S.skip = false;
+    // the narrator babbles the parts it would read aloud (from voFrom on); headings get key clicks
+    const narr = blipFor("narator");
+    for (let i = 0; i < parts.length; i++){
+      const spoken = vo && i >= voFrom;
+      await typeOut(nodes[i], parts[i].text, {cps: spoken ? 26 : 30, vol:.55, blip: spoken ? narr : null});
+      if (parts[i].tag === "h1") nodes[i].classList.add("done");
+      if (!S.skip) await wait(250);
+    }
+    S.typing = false; skipHint.remove();
+    const tail = el(box, "chap-after", "", after);
+    const row = document.createElement("div"); row.className = "starts"; tail.appendChild(row);
+    const b = document.createElement("button"); b.className = "cta"; b.innerHTML = `${btn} <kbd>Enter</kbd>`; row.appendChild(b);
+    let a2 = null;
+    if (alt){ a2 = document.createElement("button"); a2.className = "cta ghost"; a2.innerHTML = `${alt} <kbd>Esc</kbd>`; row.appendChild(a2); }
+    let gone = false;
+    const go = val => {
+      if (gone) return; gone = true;
+      c.classList.add("hidden"); document.removeEventListener("keydown", onKey); if (A.vo) release(A.vo); duck(false); stageEnter(); res(val); typer.focus();
+    };
+    const onKey = e => {
+      if (e.key === "Enter"){ e.preventDefault(); go(); }
+      else if (alt && e.key === "Escape"){ e.preventDefault(); go("alt"); }
+    };
+    b.onclick = () => go();
+    if (a2) a2.onclick = () => go("alt");
+    // short delay so the Enter that skipped the typing cannot also press the button
+    setTimeout(() => { if (gone) return; document.addEventListener("keydown", onKey); b.focus({preventScroll:true}); }, 300);
+  });
+}
+// Forum briefing box shown on a chapter's opening card.
+function brief(tag, title, text, rules = [], isNew = true){
+  return `<div class="brief"><span class="brief-tag${isNew ? " new" : ""}">${tag}</span>${title ? `<b class="brief-title">${title}</b>` : ""}<p>${text}</p>${rules.length ? `<ul class="rules">${rules.map(r => `<li>${r}</li>`).join("")}</ul>` : ""}</div>`;
+}
+document.addEventListener("keydown", e => { if (e.key === "Enter" && S.typing){ S.skip = true; e.preventDefault(); } });
+// suggestion box on the ending screen: each message becomes a record in the app's Saran entity.
+// The published site posts to its own origin; a local copy posts to the Base44 API host.
+const SARAN_URL = (location.hostname.endsWith("base44.app") ? "" : "https://app.base44.com") + "/api/apps/6af09e3738ac86634a51f467/entities/Saran";
+// keys typed in the box must not reach the card's Enter handler, which would restart the game
+$("card").addEventListener("keydown", e => { if (e.target.matches("textarea, #myBoardBtn")) e.stopPropagation(); });
+$("card").addEventListener("submit", async e => {
+  if (!e.target.matches(".saran")) return;
+  e.preventDefault();
+  const f = e.target, ta = f.querySelector("textarea"), st = f.querySelector(".saran-status"), btn = f.querySelector("button");
+  const pesan = ta.value.trim();
+  if (!pesan){ st.textContent = "Tulis dulu saran atau kritikmu."; ta.focus(); return; }
+  btn.disabled = true; st.textContent = "Mengirim";
+  try {
+    const r = await fetch(SARAN_URL, {method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({pesan, nama:S.name, akhir:f.dataset.akhir, mode:S.mode, kepercayaan:S.trust})});
+    if (!r.ok) throw new Error(r.status);
+    f.classList.add("sent"); ta.disabled = true; st.textContent = "Terkirim. Terima kasih sudah bersuara.";
+  } catch (err){ btn.disabled = false; st.textContent = "Gagal terkirim. Periksa koneksi, lalu coba lagi."; }
+});
+
+// ---------- leaderboard (Base44 entity Skor) ----------
+// Only a run that played chapters 1-8 to the end is sent (Bab 9 is hidden, so it is optional).
+// The API accepts any anonymous write, so every row is re-checked on read: out-of-range values or a
+// score that does not match its own fields are dropped, and every field is escaped before display.
+const SKOR_URL = SARAN_URL.replace(/Saran$/, "Skor");
+const LB_BONUS = { "Kursi Kedua":400, "Fajar Sendaru":350, "Martir":250, "Janji Kosong":150, "Ban Serep":100, "Kursi Empuk":50, "Suara yang Tenggelam":0 };
+const LB_MODE = { santai:.8, normal:1, sulit:1.3 };
+const LB_MODE_NAME = { santai:"Santai", normal:"Normal", sulit:"Sulit" };
+// trust carries most of the score, then the ending, then typing accuracy; harder modes multiply it
+const scoreOf = r => Math.round((r.kepercayaan * 10 + LB_BONUS[r.akhir] + r.akurasi * 3) * LB_MODE[r.mode]);
+const LB_KASAR = /anjing|anjg|babi|bangsat|bajingan|kontol|memek|ngentot|entot|jancok|jancuk|goblok|tolol|pepek|kampret|asu\b|tai\b|peler|fuck|shit|bitch/i;
+const escS = s => String(s).replace(/[<>&"']/g, c => ({"<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;", "'":"&#39;"}[c]));
+const finishedAll = () => [1, 2, 3, 4, 5, 6, 7, 8].every(n => S.done.has(n));
+let lbMine = null; // this run's row, highlighted on the board
+// called from ending(); returns {row, sent: Promise<string status>} or null when the run does not qualify
+function submitScore(akhir){
+  if (!finishedAll()) return null;
+  const { wpm, acc } = typingNums(ALL);
+  const row = { nama:S.name, kpm:Math.min(200, wpm), akurasi:acc, kepercayaan:S.trust, akhir, mode:S.mode };
+  row.skor = scoreOf(row);
+  if (LB_KASAR.test(S.name)) return { row, sent:Promise.resolve("Nama ini tidak bisa masuk papan skor.") };
+  lbMine = row; lbCache = {};
+  // keepalive: "Main Lagi" reloads the page and must not cancel the request
+  const sent = fetch(SKOR_URL, {method:"POST", keepalive:true, headers:{"Content-Type":"application/json"}, body:JSON.stringify(row)})
+    .then(r => r.ok ? "Tercatat di papan skor." : "Gagal mencatat skor.").catch(() => "Gagal mencatat skor. Periksa koneksi.");
+  return { row, sent };
+}
+function validRow(r){
+  const num = (v, max) => typeof v === "number" && v >= 0 && v <= max;
+  return r && typeof r.nama === "string" && r.nama.length >= 2 && r.nama.length <= 24 && !LB_KASAR.test(r.nama)
+    && num(r.kpm, 200) && num(r.akurasi, 100) && num(r.kepercayaan, 100)
+    && r.akhir in LB_BONUS && r.mode in LB_MODE && Math.abs(r.skor - scoreOf(r)) <= 1;
+}
+let lbCache = {}, lbTab = "skor";
+async function loadBoard(tab){
+  if (lbCache[tab]) return lbCache[tab];
+  const r = await fetch(`${SKOR_URL}?sort=-${tab}&limit=200`);
+  if (!r.ok) throw new Error(r.status);
+  const best = new Map();
+  for (const row of (await r.json()).filter(validRow)){
+    const k = row.nama.toLowerCase();
+    if (!best.has(k) || row[tab] > best.get(k)[tab]) best.set(k, row);
+  }
+  return lbCache[tab] = [...best.values()].sort((a, b) => b[tab] - a[tab] || b.skor - a.skor).slice(0, 20);
+}
+async function showBoard(tab = lbTab){
+  lbTab = tab;
+  document.querySelectorAll(".lb-tabs button").forEach(b => { const on = b.dataset.tab === tab; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; });
+  const list = $("lbList");
+  list.setAttribute("aria-labelledby", tab === "skor" ? "lbTabSkor" : "lbTabKpm");
+  list.innerHTML = `<p class="lb-empty">Memuat papan skor</p>`;
+  try {
+    const rows = await loadBoard(tab);
+    if (lbTab !== tab) return;
+    if (!rows.length){ list.innerHTML = `<p class="lb-empty">Belum ada yang menamatkan seluruh bab. Jadilah yang pertama.</p>`; return; }
+    const date = s => new Date(s).toLocaleDateString("id-ID", {day:"numeric", month:"short"});
+    list.innerHTML = `<ol>${rows.map((r, i) => {
+      const me = lbMine && r.nama === lbMine.nama && r[tab] === lbMine[tab];
+      const val = tab === "skor" ? `${r.skor}<small>skor</small>` : `${r.kpm}<small>kata/menit</small>`;
+      return `<li${me ? ' class="me"' : ""}><span class="rk">${i + 1}</span><div class="nm"><b>${escS(r.nama)}</b>
+        <span>${LB_MODE_NAME[r.mode]} · ${escS(r.akhir)} · akurasi ${r.akurasi}%${r.created_date ? " · " + date(r.created_date) : ""}</span></div><span class="vl">${val}</span></li>`;
+    }).join("")}</ol>`;
+  } catch (e){ if (lbTab === tab) list.innerHTML = `<p class="lb-empty">Papan skor gagal dimuat. Periksa koneksi, lalu coba lagi.</p>`; }
+}
+let lbBack = null;
+// capture phase: while the board is open no key reaches the game (Enter would start or restart it)
+function lbKeys(e){
+  if (e.key === "Escape"){ e.preventDefault(); closeBoard(); }
+  else if (e.key === "ArrowRight" || e.key === "ArrowLeft"){
+    if (!e.target.closest(".lb-tabs")) return;
+    const t = lbTab === "skor" ? "kpm" : "skor"; showBoard(t); $(t === "skor" ? "lbTabSkor" : "lbTabKpm").focus();
+  }
+  if (e.key !== "Tab") e.stopPropagation();
+}
+function openBoard(){
+  lbBack = document.activeElement;
+  $("board").classList.remove("hidden");
+  document.addEventListener("keydown", lbKeys, true);
+  showBoard(lbTab);
+  $("lbClose").focus();
+}
+function closeBoard(){
+  $("board").classList.add("hidden");
+  document.removeEventListener("keydown", lbKeys, true);
+  const back = lbBack && lbBack !== document.body && lbBack.isConnected ? lbBack
+    : !$("title").classList.contains("hidden") ? $("boardBtn") : typer;
+  back.focus();
+}
+$("lbClose").onclick = closeBoard;
+$("board").addEventListener("click", e => { if (e.target === $("board")) closeBoard(); });
+document.querySelectorAll(".lb-tabs button").forEach(b => b.onclick = () => showBoard(b.dataset.tab));
+$("boardBtn").onclick = openBoard;
+$("card").addEventListener("click", e => { if (e.target.closest("#myBoardBtn")) openBoard(); });
+document.addEventListener("pointerdown", e => {
+  if (S.typing) S.skip = true;
+  if (!e.target.closest("button,label,input,textarea,.lb")) typer.focus();
+});
+
+// ---------- phones: on-screen keyboard ----------
+const COARSE = matchMedia("(pointer:coarse)");
+// show "Ketuk untuk mengetik" while a question waits and the keyboard is closed
+function kbdState(){
+  document.body.classList.toggle("kbd-closed", COARSE.matches && !!S.onSubmit && document.activeElement !== typer);
+}
+// The keyboard counts as open when the visible viewport is clearly shorter than the tallest one seen.
+// Android (interactive-widget=resizes-content) shrinks the page itself; iOS only shrinks visualViewport,
+// so there the page is sized to it and pinned to the top.
+if (window.visualViewport){
+  const vv = visualViewport; let tallest = vv.height;
+  const fitKeyboard = () => {
+    tallest = Math.max(tallest, vv.height);
+    const open = COARSE.matches && document.activeElement === typer && vv.height < tallest * .8;
+    document.body.classList.toggle("kb", open);
+    const overlay = innerHeight - vv.height > 80; // iOS: the keyboard covers the page instead of resizing it
+    document.body.style.height = open && overlay ? vv.height + "px" : "";
+    if (open && overlay && (scrollY || vv.offsetTop)) scrollTo(0, 0);
+    const lock = $("opts").querySelector(".lock"); if (open && lock) lock.scrollIntoView({block:"nearest"});
+  };
+  vv.addEventListener("resize", fitKeyboard); vv.addEventListener("scroll", fitKeyboard);
+  addEventListener("orientationchange", () => { tallest = 0; setTimeout(fitKeyboard, 300); });
+}
+
+// =====================================================================
+// TYPING ENGINE (case-sensitive: capitals and punctuation must be exact)
+// =====================================================================
+const typer = $("typer");
+typer.addEventListener("focus", kbdState);
+typer.addEventListener("blur", () => setTimeout(kbdState, 50));
+$("kbdBtn").onclick = () => typer.focus();
+function setTrust(v){
+  S.trust = Math.max(0, Math.min(100, v));
+  $("trustBar").style.width = S.trust + "%";
+  $("trustNum").innerHTML = "<b>" + S.trust + "</b>";
+}
+function setElite(v){
+  S.elite = Math.max(0, Math.min(100, v));
+  $("eliteBar").style.width = S.elite + "%";
+  $("eliteNum").textContent = S.elite;
+}
+// a small "+6" that rises out of a HUD number; for the elite meter a rise is bad news
+function floatDelta(id, d, inverse = false){
+  if (!d) return;
+  const f = document.createElement("span");
+  f.className = "fdelta " + ((d > 0) !== inverse ? "up" : "down");
+  f.textContent = (d > 0 ? "+" : "") + d;
+  $(id).appendChild(f); setTimeout(() => f.remove(), 1700);
+}
+function setPromises(){ $("promNum").textContent = S.promises.length; }
+function unlock(id){ $(id).classList.remove("hidden"); }
+// "Enter" in a hint is drawn as a keycap
+function hint(text, warn){
+  const h = $("hint"); h.textContent = text; h.classList.toggle("warn", !!warn);
+  h.innerHTML = h.innerHTML.replace(/\bEnter\b/, "<kbd>Enter</kbd>");
+}
+// The option sharing the longest prefix (ignoring case) gets locked, so a wrong capital still targets the right line.
+function bestTarget(){
+  const t = S.typed.toLowerCase();
+  let best = 0, bestScore = -1;
+  S.targets.forEach((o, i) => {
+    const s = o.toLowerCase(); let k = 0;
+    while (k < t.length && k < s.length && t[k] === s[k]) k++;
+    if (k > bestScore){ bestScore = k; best = i; }
+  });
+  return best;
+}
+const esc = c => ({"<":"&lt;", ">":"&gt;", "&":"&amp;"}[c] || c);
+function render(){
+  const box = $("opts"); box.innerHTML = "";
+  const lock = S.typed.length ? bestTarget() : -1;
+  S.targets.forEach((o, i) => {
+    const div = document.createElement("div");
+    div.className = "opt" + (lock === -1 ? "" : (i === lock ? " lock" : " dim"));
+    if (S.tags[i]){ div.classList.add("ev"); div.dataset.tag = S.tags[i]; } // answer unlocked by evidence
+    if (i === lock){
+      let html = "";
+      for (let k = 0; k < o.length; k++){
+        const ch = esc(o[k]);
+        if (k < S.typed.length) html += `<span class="${S.typed[k] === o[k] ? "c-ok" : "c-bad"}">${ch}</span>`;
+        else html += k === S.typed.length ? `<span class="cur">${ch}</span>` : ch;
+      }
+      // extra characters typed past the end of the sentence
+      for (let k = o.length; k < S.typed.length; k++) html += `<span class="c-bad">${esc(S.typed[k])}</span>`;
+      div.innerHTML = html;
+      div.style.setProperty("--p", Math.min(1, S.typed.length / o.length));
+    } else div.textContent = o;
+    box.appendChild(div);
+  });
+  // the panel can be shorter than the options (phones, open keyboard): keep the line being typed in view
+  box.querySelector(".lock")?.scrollIntoView({block:"nearest"});
+}
+// ---- typing stats for the chapter-end screen ----
+// Each answer is sampled in 1-second buckets of keystrokes; seconds spent reading or listening are not counted.
+const ST = { buckets:[], cur:null, tick:null, t0:0, keys:0, keysOk:0, correct:0, incorrect:0, extra:0, missed:0 };
+const ALL = { buckets:[], keys:0, keysOk:0, correct:0, incorrect:0, extra:0, missed:0 }; // whole game
+// moves this chapter's numbers into the whole-game totals and starts a fresh chapter
+function statsReset(){
+  ALL.buckets.push(...ST.buckets);
+  for (const k of ["keys", "keysOk", "correct", "incorrect", "extra", "missed"]){ ALL[k] += ST[k]; ST[k] = 0; }
+  ST.buckets = [];
+}
+function recStart(){
+  if (!S.rec) return;
+  ST.cur = {typed:0, ok:0, err:0, dur:1}; ST.t0 = performance.now();
+  ST.tick = setInterval(() => { ST.buckets.push(ST.cur); ST.cur = {typed:0, ok:0, err:0, dur:1}; ST.t0 = performance.now(); }, 1000);
+}
+function recKey(ok){
+  if (!S.rec || !ST.cur) return;
+  ST.cur.typed++; ST.keys++;
+  if (ok){ ST.cur.ok++; ST.keysOk++; } else ST.cur.err++;
+}
+function recStop(idx, targets){
+  if (!S.rec || !ST.cur) return;
+  clearInterval(ST.tick);
+  const part = (performance.now() - ST.t0) / 1000;
+  if (part > .15){ ST.cur.dur = part; ST.buckets.push(ST.cur); }
+  ST.cur = null;
+  // final characters: correct / incorrect / extra / missed against the chosen (or closest) sentence
+  const o = targets[idx === null ? bestTarget() : idx], t = S.typed;
+  for (let k = 0; k < Math.min(o.length, t.length); k++) t[k] === o[k] ? ST.correct++ : ST.incorrect++;
+  if (t.length > o.length) ST.extra += t.length - o.length;
+  if (idx !== null && t.length < o.length) ST.missed += o.length - t.length;
+}
+// Catmull-Rom spline through the points, as an SVG path
+function smooth(pts){
+  if (!pts.length) return "";
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+// headline typing numbers, shared by the stats card and the leaderboard
+function typingNums(src){
+  const B = src.buckets.length ? src.buckets : [{typed:0, ok:0, err:0, dur:1}];
+  const secs = B.reduce((a, b) => a + b.dur, 0);
+  return { B, secs, wpm: Math.round(src.correct / 5 / (secs / 60)) || 0, acc: src.keys ? Math.round(src.keysOk / src.keys * 100) : 0 };
+}
+// src: one chapter (ST) or the whole game (ALL)
+function statsHTML(src = ST, title = ""){
+  const { B, secs, wpm, acc } = typingNums(src);
+  const rawS = B.map(b => b.typed / b.dur * 12);
+  let cOk = 0, cT = 0;
+  const wpmS = B.map(b => { cOk += b.ok; cT += b.dur; return cOk / 5 / (cT / 60); });
+  const mean = rawS.reduce((a, b) => a + b, 0) / rawS.length;
+  const sd = Math.sqrt(rawS.reduce((a, b) => a + (b - mean) ** 2, 0) / rawS.length);
+  const cons = mean ? Math.max(0, Math.round(100 * (1 - sd / mean))) : 0;
+  // chart geometry
+  const W = 1000, H = 230, L = 60, R = 50, T = 16, Bm = 36, n = B.length;
+  const yMax = Math.max(40, Math.ceil(Math.max(...rawS, ...wpmS) / 20) * 20);
+  const eMax = Math.max(1, ...B.map(b => b.err));
+  const x = i => L + (n === 1 ? (W - L - R) / 2 : i * (W - L - R) / (n - 1));
+  const y = v => T + (H - T - Bm) * (1 - v / yMax);
+  const ye = v => T + (H - T - Bm) * (1 - v / eMax);
+  let g = "";
+  for (let v = 0; v <= yMax; v += 20) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#2a2e38"/><text x="${L - 10}" y="${y(v) + 5}" text-anchor="end" fill="#6b7080" font-size="15">${v}</text>`;
+  for (let e = 0; e <= eMax; e++) g += `<text x="${W - R + 12}" y="${ye(e) + 5}" fill="#6b7080" font-size="15">${e}</text>`;
+  const step = Math.max(1, Math.ceil(n / 30));
+  for (let i = 0; i < n; i += step) g += `<text x="${x(i)}" y="${H - 12}" text-anchor="middle" fill="#6b7080" font-size="15">${i + 1}</text>`;
+  g += `<text transform="translate(16 ${(H - Bm) / 2}) rotate(-90)" text-anchor="middle" fill="#6b7080" font-size="14">Kata per Menit</text>`;
+  g += `<text transform="translate(${W - 8} ${(H - Bm) / 2}) rotate(90)" text-anchor="middle" fill="#6b7080" font-size="14">Salah</text>`;
+  const rawP = rawS.map((v, i) => [x(i), y(v)]), wpmP = wpmS.map((v, i) => [x(i), y(v)]);
+  g += `<path d="${smooth(rawP)}" fill="none" stroke="#6b7080" stroke-width="3"/>`;
+  g += rawP.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="3.5" fill="#6b7080"/>`).join("");
+  g += `<path d="${smooth(wpmP)}" fill="none" stroke="var(--accent)" stroke-width="3.5"/>`;
+  g += wpmP.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="3.5" fill="var(--accent)"/>`).join("");
+  g += B.map((b, i) => b.err ? `<text x="${x(i)}" y="${ye(b.err) + 5}" text-anchor="middle" fill="var(--bad)" font-size="18" font-weight="700">×</text>` : "").join("");
+  const typos = src.keys - src.keysOk;
+  return `<div class="stats">${title ? `<p class="stats-title">${title}</p>` : ""}
+    <div class="bottom">
+      <div><div class="lbl">kecepatan</div><div class="val">${wpm} <small style="font-size:.5em">kpm</small></div></div>
+      <div><div class="lbl">akurasi</div><div class="val">${acc}%</div></div>
+      <div><div class="lbl">waktu mengetik</div><div class="val">${Math.round(secs)} dtk</div></div>
+      <div><div class="lbl">salah ketik</div><div class="val">${typos}</div></div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik kecepatan mengetik per detik">${g}</svg>
+    <p class="note">Kuning: kecepatan rata-rata. Abu-abu: kecepatan per detik. ×: huruf salah.</p>
+  </div>`;
+}
+
+function ask(targets, {prompt, hintText, timeLimit, exact, tags = []}){
+  return new Promise(resolve => {
+    S.targets = targets; S.tags = tags; S.typed = ""; typer.value = ""; S.exact = !!exact;
+    $("prompt").textContent = prompt || "";
+    hint(hintText || "Ketik salah satu jawaban, lalu tekan Enter.");
+    S.start = performance.now();
+    const ob = $("opts"); ob.classList.add("enter"); setTimeout(() => ob.classList.remove("enter"), 450);
+    render(); recStart();
+    const tb = $("timer");
+    clearInterval(S.timer);
+    tb.style.visibility = timeLimit && !S.relaxed ? "visible" : "hidden";
+    $("timerBar").style.width = "100%"; $("timerBar").style.background = "var(--ok)";
+    // a first-run tutorial may point at these answers first; the clock and the keyboard wait for it
+    const pre = S.tourNext; S.tourNext = null;
+    (pre ? pre() : Promise.resolve()).then(begin);
+    function begin(){
+    S.start = performance.now(); typer.focus();
+    if (timeLimit && !S.relaxed){
+      tb.style.visibility = "visible";
+      const end = performance.now() + timeLimit * 1000;
+      S.timer = setInterval(() => {
+        const left = (end - performance.now()) / (timeLimit * 1000);
+        $("timerBar").style.width = Math.max(0, left * 100) + "%";
+        $("timerBar").style.background = left < .25 ? "var(--bad)" : left < .5 ? "var(--accent)" : "var(--ok)";
+        if (left <= 0){ clearInterval(S.timer); finish(null); }
+      }, 50);
+    }
+    S.onSubmit = finish; kbdState();
+    }
+    function finish(idx){
+      clearInterval(S.timer); recStop(idx, targets); S.onSubmit = null; tb.style.visibility = "hidden"; kbdState();
+      const secs = (performance.now() - S.start) / 1000;
+      let acc = 0;
+      if (idx !== null){
+        const o = targets[idx]; let ok = 0;
+        for (let k = 0; k < o.length; k++) if (S.typed[k] === o[k]) ok++;
+        acc = ok / Math.max(o.length, S.typed.length);
+      }
+      resolve({ idx, acc, secs });
+    }
+  });
+}
+// a press camera fires every 2 to 3 typed spaces; flashes() only finds .flash in the visible stage, so scenes
+// without cameras stay dark. Read from `input` (not keydown) so it also works on Android keyboards.
+let spaceCount = 0, spaceNext = 2;
+typer.addEventListener("input", e => {
+  if (e.data && e.data.endsWith(" ") && ++spaceCount >= spaceNext){ spaceCount = 0; spaceNext = 2 + (Math.random() < .5 ? 1 : 0); flashes(1); }
+});
+typer.addEventListener("input", () => {
+  if (!S.onSubmit){ typer.value = ""; return; }
+  // phone keyboards turn ' and " into curly quotes; the answers use straight ones
+  if (/[\u2018\u2019\u201C\u201D]/.test(typer.value)) typer.value = typer.value.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
+  const grew = typer.value.length > S.typed.length;
+  S.typed = typer.value;
+  if (grew){
+    const k = S.typed.length - 1, target = S.targets[bestTarget()];
+    click(.55, S.typed[k] !== target[k]);
+    recKey(S.typed[k] === target[k]);
+  }
+  render();
+});
+typer.addEventListener("keydown", e => {
+  if (e.key !== "Enter" || !S.onSubmit || S.typing) return;
+  e.preventDefault();
+  // the submit Enter must not reach the document "skip typing animation" handler,
+  // otherwise the line that follows (and its voice) is skipped instantly
+  e.stopPropagation();
+  const idx = bestTarget(), target = S.targets[idx];
+  if (S.exact){
+    if (S.typed !== target){ hint("Masih ada yang salah. Perhatikan huruf kapital dan tanda baca.", true); return; }
+  } else {
+    if (S.typed[0] !== target[0]){ hint("Awali kalimat dengan huruf kapital.", true); return; }
+    if (S.typed.length < target.length * .9){ hint("Kalimatnya belum selesai.", true); return; }
+  }
+  S.onSubmit(idx);
+});
+
+// =====================================================================
+// FORUM ENGINE (shared by every chapter; story content lives in cerita.js)
+// =====================================================================
+function sapa(){ return S.sapa === "L" ? {pendek:"Pak", panjang:"Bapak"} : {pendek:"Bu", panjang:"Ibu"}; }
+function playerFolder(){ return S.sapa === "L" ? "pemain_l" : "pemain_p"; }
+// Story text placeholders: {P} = Bapak/Ibu, {p} = Pak/Bu, {N} = player's first name.
+function fill(s){
+  const {pendek, panjang} = sapa();
+  return (s || "").replace(/\{P\}/g, panjang).replace(/\{p\}/g, pendek).replace(/\{N\}/g, S.first);
+}
+// NPC lines that say Bapak/Ibu are recorded twice: <id>_l and <id>_p
+const voSuffix = s => /\{[Pp]\}/.test(s) ? (S.sapa === "L" ? "_l" : "_p") : "";
+const htmlEsc = s => String(s).replace(/[<>&"]/g, c => ({"<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;"}[c]));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+// Forum presets. time: [base seconds, factor] for Normal and Sulit.
+// Time limit = base + factor x the player's own typing time for the longest answer (Santai has no timer).
+const FORUMS = {
+  cegat:   { time:[[6, 2.5], [8, 1.8]], flash:true, zoom:true },
+  sosmed:  { time:[[6, 2.5], [8, 1.8]], feed:true },
+  siniar:  { time:[[8, 3], [10, 2.2]], sloppyAt:.92 },
+  sosmed2: { time:[[4, 2], [5, 1.5]], feed:true, twist:true },
+  debat:   { time:[[5, 2.1], [6, 1.6]], twist:true },
+  sidang:  { time:[[6, 2.2], [7, 1.6]], flash:true, twist:true },
+  siaran:  { time:[[6, 2.4], [7, 1.7]], twist:true }
+};
+
+// One question: the speaker asks, the player types an answer, then the meters change.
+// item: {who, q, vo, folder, node, prompt, opts, sulit, extra, noTimer, silent, feed, promiseId}
+// option: {t, vo, d (trust), e (elite), r (reaction), ev, promise, admit, safe, flag, sold, need}
+async function question(item, F){
+  const sulit = S.mode === "sulit";
+  const base = sulit && item.sulit ? item.sulit : item.opts;
+  const extra = (item.extra || []).find(x => S.ev.has(x.need)); // a fourth answer unlocked by evidence
+  const list = extra ? [...base, extra] : base;
+  const order = list.map((o, i) => i).sort(() => Math.random() - .5);
+  const texts = order.map(i => list[i].t);
+  const tags = order.map(i => list[i].need ? EVIDENCE[list[i].need].tag : "");
+  const who = fill(item.who || F.who), folder = item.folder || F.folder || "narator";
+  const nodeId = item.node !== undefined ? item.node : F.node;
+  const feed = item.feed ?? F.feed;
+  const qText = fill(item.q);
+  if (feed && !item.silent) addPost(who, qText, item.hot ? "hot" : "");
+  await say(who, qText, nodeId ? $(nodeId) : null, {vo: item.vo ? item.vo + voSuffix(item.q) : null, folder});
+  const longest = Math.max(...texts.map(t => t.length));
+  const [b, f] = F.time[sulit ? 1 : 0];
+  const limit = item.noTimer ? null : b + (longest / S.cps) * f;
+  if (!item.silent) S.tourNext = () => tour("forum", TOUR_STEPS.forum);
+  const r = await ask(texts, {prompt: fill(item.prompt || F.prompt), timeLimit: limit, tags, hintText: item.hint});
+  $("opts").innerHTML = ""; $("prompt").textContent = ""; hint("");
+  const hero = F.hero ? $(F.hero) : null;
+  let line, delta, de = 0, twisted = "", newPromise = false, o = null;
+  if (r.idx === null){
+    const to = F.timeout || {};
+    delta = to.d ?? -8;
+    if (to.who) await say(to.who, fill(to.text), to.node ? $(to.node) : null, {vo:to.vo, folder:to.folder});
+    else await say(S.name, "...", hero);
+    line = fill(to.line || "{N} terdiam terlalu lama. Kamera terus merekam keheningan itu.");
+  } else {
+    o = list[order[r.idx]];
+    delta = o.d || 0; de = o.e || 0;
+    // sloppy typing weakens a good answer; from Bab 5 the media also twists the typo into a headline
+    const sloppy = r.acc < (F.sloppyAt || .85);
+    if (sloppy && delta > 0) delta = Math.round(delta / 2);
+    if (sloppy && F.twist){ delta -= 5; twisted = S.typed; }
+    if (o.ev) S.ev.add(o.ev);
+    if (o.promise && !S.promises.includes(o.promise)){ S.promises.push(o.promise); newPromise = true; }
+    if (o.admit) S.promises = S.promises.filter(p => p !== item.promiseId);
+    if (o.safe) S.safe++;
+    if (o.flag) S.flags[o.flag] = true;
+    if (o.sold) S.sold = true;
+    if (!item.silent){
+      if (F.flash) flashes(2);
+      if (feed) addPost(S.first, o.t, "me");
+      await say(S.name, o.t, hero, {vo:o.vo, folder:playerFolder()});
+      await wait(700);
+    }
+    line = fill(o.r);
+    if (twisted) line += " Salah ketikmu dipotong dan disebarkan sebagai judul berita.";
+    else if (sloppy) line += " (Kalimatmu kurang rapi sehingga terdengar kurang meyakinkan.)";
+  }
+  // trust is harder to earn the higher it already is (losses stay full)
+  if (delta > 0) delta = Math.max(1, Math.round(delta * (100 - S.trust) / 90));
+  setTrust(S.trust + delta); floatDelta("trustNum", delta);
+  if (de){ setElite(S.elite + de); if (!$("eliteBox").classList.contains("hidden")) floatDelta("eliteNum", de, true); }
+  setPromises();
+  let html = `<div class="result">${line}`;
+  if (twisted) html += `<div class="twist"><span>Plintiran media</span>"${htmlEsc(twisted)}"</div>`;
+  html += `<div class="deltas"><span class="${delta >= 0 ? "delta-up" : "delta-down"}">Kepercayaan ${delta >= 0 ? "+" : ""}${delta}</span>`;
+  if (de && !$("eliteBox").classList.contains("hidden")) html += `<span class="delta-elite">Tekanan Elit ${de > 0 ? "+" : ""}${de}</span>`;
+  if (newPromise && !$("promBox").classList.contains("hidden")) html += `<span class="delta-prom">Janji baru dicatat</span>`;
+  html += `</div></div>`;
+  $("opts").innerHTML = html;
+  await wait(2800);
+  $("opts").innerHTML = "";
+  return o;
+}
+async function runForum(items, F){
+  if (F.zoom) $("world").classList.add("zoom");
+  for (const item of items) await question(item, F);
+}
+
+// Speech lines that must be typed exactly (Prolog oath, Bab 8 opening). Returns {chars, secs}.
+async function speech(lines, heroId, prompt){
+  let chars = 0, secs = 0;
+  S.tourNext = () => tour("sumpah", TOUR_STEPS.sumpah);
+  for (const line of lines){
+    const r = await ask([line.t], { prompt, hintText:"Ketik kalimat di atas dengan tepat, lalu tekan Enter.", exact:true });
+    chars += line.t.length; secs += r.secs;
+    $("opts").innerHTML = ""; $("prompt").textContent = ""; hint("");
+    await say(S.name, line.t, $(heroId), {vo:line.vo, folder:playerFolder()});
+    await wait(500);
+  }
+  return {chars, secs};
+}
+
+// ---- social-media phone feed (Bab 2, 5 and 8) ----
+function addPost(who, text, kind = ""){
+  const f = $("feedList");
+  const d = document.createElement("div"); d.className = "post " + kind;
+  d.innerHTML = `<b></b><span></span>`;
+  d.firstChild.textContent = kind === "me" ? S.first : who; d.lastChild.textContent = text;
+  f.prepend(d);
+  while (f.children.length > 7) f.lastChild.remove();
+}
+let noiseId = null;
+// a stream of hostile posts in the background (Bab 5)
+function feedNoise(pool, on){
+  clearInterval(noiseId);
+  if (on) noiseId = setInterval(() => { const [h, t] = pick(pool); addPost(h, t, "hot"); }, 2600);
+}
+
+// ---- chapter frame ----
+function chapterStart(n, title, scene, extra, track){
+  $("chap").innerHTML = `<b>${n ? "Bab " + n : "Prolog"}</b>${title}`;
+  $("bubble").classList.remove("show");
+  $("world").classList.remove("zoom");
+  $("feedList").innerHTML = "";
+  setScene(scene, extra); music(track);
+  stageWait();
+  // saved before the cool-down, so continuing a chapter applies it only once
+  saveGame(n);
+  // the elite cool down a little between chapters
+  if (n >= 3) setElite(S.elite - 10);
+  if (n >= 2) unlock("eliteBox");
+  if (n >= 3) unlock("promBox");
+}
+function metersHTML(){
+  let h = `<div class="meters-end"><div class="mtr">Kepercayaan<span class="meter"><i style="width:${S.trust}%"></i></span><b>${S.trust}</b></div>`;
+  if (!$("eliteBox").classList.contains("hidden")) h += `<div class="mtr">Tekanan Elit<span class="meter elite"><i style="width:${S.elite}%"></i></span><b>${S.elite}</b></div>`;
+  if (!$("promBox").classList.contains("hidden")) h += `<div class="mtr">Janji Tertunda<b>${S.promises.length}</b></div>`;
+  return h + `</div>`;
+}
+function ledgerHTML(){
+  const items = [...S.ev].map(k => `<li><span class="t ev">Bukti</span>${EVIDENCE[k].text}</li>`)
+    .concat(S.promises.map(id => `<li><span class="t pr">Janji</span>${cap(PROMISES[id])}. Rakyat akan menagihnya.</li>`));
+  return items.length ? `<ul class="ledger">${items.join("")}</ul>` : "";
+}
+// Chapter-end newspaper card. ends: {tinggi, sedang, rendah} -> [headline, sub]; the vo id is bab<n>_akhir_<key>.
+async function chapterEnd(n, ends, next, forceKey){
+  S.rec = false;
+  $("world").classList.remove("zoom");
+  $("bubble").classList.remove("show");
+  feedNoise(null, false);
+  S.done.add(n); // counts toward the leaderboard (see finishedAll)
+  const key = forceKey || (S.trust >= 75 ? "tinggi" : S.trust >= 45 ? "sedang" : "rendah");
+  const [headline, sub] = ends[key];
+  music(S.trust >= 45 ? "akhir_baik" : "akhir_buruk");
+  const parts = [{tag:"h2", text:`Bab ${n} Selesai`}, {tag:"div", cls:"headline", text:headline}, {tag:"p", cls:"story", text:sub}];
+  if (next) parts.push({tag:"p", cls:"next", text:`Bersambung ke Bab ${n + 1}: ${next}.`});
+  await card({ vo:`bab${n}_akhir_${key}`, mark:n, btn: next ? `Lanjut ke Bab ${n + 1}` : "Lanjut", parts,
+    after: metersHTML() + ledgerHTML() + statsHTML(ST, `Statistik mengetik Bab ${n}`) });
+  statsReset();
+}
+
+// ---- checkpoint: the game is long, so each chapter start is saved in this browser ----
+const SAVE_KEY = "suara-terakhir-simpanan";
+function saveGame(n){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ n, name:S.name, sapa:S.sapa, mode:S.mode, cps:S.cps, trust:S.trust, elite:S.elite,
+      ev:[...S.ev], promises:S.promises, safe:S.safe, flags:S.flags, all:ALL }));
+  } catch (e) {}
+}
+function loadGame(){
+  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return d && d.n >= 1 && d.n <= CHAPTERS.length ? d : null; } catch (e) { return null; }
+}
+function clearSave(){ try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+
+// =====================================================================
+// FIRST-RUN TUTORIAL: spotlights one element at a time. Each part is shown once (remembered in localStorage).
+// =====================================================================
+const TOUR_KEY = "suaraTerakhir.tour";
+function tourSeen(id){ try { return !!(JSON.parse(localStorage.getItem(TOUR_KEY)) || {})[id]; } catch (e) { return false; } }
+function tourMark(ids){ try { const o = JSON.parse(localStorage.getItem(TOUR_KEY)) || {}; ids.forEach(i => o[i] = 1); localStorage.setItem(TOUR_KEY, JSON.stringify(o)); } catch (e) {} }
+const TOUR_ALL = ["intro", "kartu", "sumpah", "forum"];
+// steps: [{el: () => element | [elements] | null, title, text}]; a step without a visible element is shown centred
+function tour(id, steps){
+  if (tourSeen(id)) return Promise.resolve();
+  const vis = e => e && e.getClientRects().length && getComputedStyle(e).visibility !== "hidden";
+  const els = st => [].concat(st.el ? st.el() : []).filter(vis);
+  steps = steps.filter(st => !st.el || els(st).length);
+  if (!steps.length) return Promise.resolve();
+  return new Promise(resolve => {
+    const box = el(document.body, "", "", `<div class="t-blur"></div><div class="t-hole"></div>
+      <div class="t-tip" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourText">
+        <div class="t-step"></div><h3 id="tourTitle"></h3><p id="tourText"></p>
+        <div class="t-row"><button type="button" class="t-skip">Lewati tutorial</button><button type="button" class="t-next"></button></div></div>`);
+    box.id = "tour";
+    const hole = box.querySelector(".t-hole"), tip = box.querySelector(".t-tip"), blur = box.querySelector(".t-blur"), next = box.querySelector(".t-next");
+    const had = document.activeElement; typer.blur();
+    let i = 0;
+    function place(){
+      const st = steps[i], list = els(st), W = innerWidth, H = innerHeight, pad = 8;
+      let r;
+      if (list.length){
+        const rs = list.map(e => e.getBoundingClientRect());
+        r = {l:Math.min(...rs.map(a => a.left)) - pad, t:Math.min(...rs.map(a => a.top)) - pad, r:Math.max(...rs.map(a => a.right)) + pad, b:Math.max(...rs.map(a => a.bottom)) + pad};
+        r.l = Math.max(4, r.l); r.t = Math.max(4, r.t); r.r = Math.min(W - 4, r.r); r.b = Math.min(H - 4, r.b);
+      } else r = {l:W / 2, t:H / 2, r:W / 2, b:H / 2};
+      hole.classList.toggle("none", !list.length);
+      Object.assign(hole.style, {left:r.l + "px", top:r.t + "px", width:(r.r - r.l) + "px", height:(r.b - r.t) + "px"});
+      // blur everything except the hole (even-odd path: outer rectangle minus the hole)
+      blur.style.clipPath = list.length ? `path(evenodd,"M0 0H${W}V${H}H0Z M${r.l} ${r.t}H${r.r}V${r.b}H${r.l}Z")` : "none";
+      const tw = tip.offsetWidth, th = tip.offsetHeight, gap = 14;
+      let x = list.length ? (r.l + r.r) / 2 - tw / 2 : W / 2 - tw / 2, y;
+      if (!list.length) y = H / 2 - th / 2;
+      else if (r.b + gap + th <= H - 8) y = r.b + gap;
+      else if (r.t - gap - th >= 8) y = r.t - gap - th;
+      else y = Math.max(8, H - th - 8); // the element fills the screen: the card sits over its bottom edge
+      tip.style.left = Math.max(16, Math.min(W - tw - 16, x)) + "px";
+      tip.style.top = Math.max(8, y) + "px";
+    }
+    function show(){
+      const st = steps[i];
+      box.querySelector(".t-step").textContent = steps.length > 1 ? `Langkah ${i + 1} dari ${steps.length}` : "Tutorial";
+      box.querySelector("#tourTitle").textContent = st.title;
+      box.querySelector("#tourText").innerHTML = st.text;
+      next.innerHTML = (i === steps.length - 1 ? (st.last || "Mengerti") : "Lanjut") + " <kbd>Enter</kbd>";
+      place(); next.focus({preventScroll:true});
+      // restart the pop-up animation for this step
+      for (const e of [tip, hole]){ e.classList.remove("pop"); void e.offsetWidth; e.classList.add("pop"); }
+    }
+    function close(all){
+      tourMark(all ? TOUR_ALL : [id]);
+      document.removeEventListener("keydown", onKey, true); removeEventListener("resize", place);
+      if (had && had !== document.body && had.focus) had.focus({preventScroll:true});
+      // short exit animation, then remove (no delay when motion is reduced)
+      box.classList.add("out");
+      setTimeout(() => { box.remove(); resolve(); }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180);
+    }
+    const go = () => { if (++i >= steps.length) close(false); else show(); };
+    // capture phase: Enter must not also start the game, submit an answer or skip a line
+    const onKey = e => {
+      if (e.key === "Enter" || e.key === "ArrowRight"){ e.preventDefault(); e.stopPropagation(); go(); }
+      else if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); close(true); }
+      else if (e.key !== "Tab") e.stopPropagation();
+    };
+    next.onclick = go;
+    box.querySelector(".t-skip").onclick = () => close(true);
+    document.addEventListener("keydown", onKey, true); addEventListener("resize", place);
+    show();
+  });
+}
+const TOUR_STEPS = {
+  intro: [
+    {title:"Selamat datang di Suara Terakhir", text:"Ini gim cerita yang dimainkan dengan <b>mengetik</b>. Kamu adalah anggota dewan termuda di Republik Sendaru. Banjir, bansos yang hilang, fitnah, sampai sidang pemakzulan menunggumu."},
+    {title:"Kata-katamu menentukan cerita", text:"Setiap jawaban harus kamu ketik sendiri. Pilihanmu mengubah <b>kepercayaan rakyat</b>, dan itu menentukan akhir ceritamu."},
+    {el:() => document.querySelector("#title .modes"), title:"Pilih tingkat kesulitan", text:"<b>Santai</b> tanpa batas waktu, <b>Normal</b> untuk kebanyakan pemain, <b>Sulit</b> kalau ingin jawaban yang menjebak. Bisa juga tekan 1, 2, atau 3."},
+    {el:() => $("startBtn"), title:"Mulai di sini", text:"Kalau sudah siap, tekan <b>Mulai Bermain</b> atau Enter.", last:"Siap"}
+  ],
+  kartu: [
+    {el:() => [$("nameInput"), document.querySelector("#nameCard .seg")], title:"Isi kartu anggota dewan", text:"Tulis nama lengkapmu dengan <b>huruf kapital</b> di awal setiap kata, lalu pilih sapaan Bapak atau Ibu. Tokoh lain akan memanggilmu begitu."},
+    {el:() => $("signPad"), title:"Tanda tangan", text:"Boleh dicoret bebas dengan mouse atau jari. Ini tidak wajib."},
+    {el:() => document.querySelector("#nameCard .chk"), title:"Prolog adalah tutorialnya", text:"Kalau ini pertama kali, <b>biarkan tidak dicentang</b>. Prolog mengukur kecepatan mengetikmu supaya batas waktu adil."},
+    {el:() => $("nameBtn"), title:"Lanjut", text:"Tekan <b>Lanjut</b> atau Enter untuk masuk ke gedung dewan.", last:"Mengerti"}
+  ],
+  sumpah: [
+    {el:() => $("opts"), title:"Ketik kalimat ini", text:"Ketik kalimat sumpah ini <b>persis sama</b>, termasuk huruf kapital dan tanda baca. Huruf yang benar berubah warna, yang salah ditandai."},
+    {el:() => $("kbdBtn"), title:"Buka keyboard", text:"Di HP, ketuk tombol ini kalau keyboard belum muncul."},
+    {el:() => $("hint"), title:"Petunjuk", text:"Pesan di sini memberi tahu kalau masih ada yang salah. Tekan <b>Enter</b> setelah kalimatnya selesai.", last:"Mulai mengetik"}
+  ],
+  forum: [
+    {el:() => $("bubble").classList.contains("show") ? $("bubble") : null, title:"Ada yang bertanya", text:"Baca dulu pertanyaannya dan perhatikan siapa yang bertanya."},
+    {el:() => $("opts"), title:"Pilih dengan mengetik", text:"Ini <b>tiga pilihan jawaban</b>. Tidak perlu diklik: cukup mulai ketik salah satunya, lalu tekan <b>Enter</b>. Jawaban yang sedang kamu ketik akan terkunci."},
+    {el:() => $("timer"), title:"Batas waktu", text:"Garis ini memendek. Kalau habis sebelum kamu menjawab, kamu dianggap diam dan kepercayaan turun."},
+    {el:() => [document.querySelector("#hud .hx .hl"), $("trustBar").parentElement, $("trustNum")], title:"Kepercayaan rakyat", text:"Jawaban jujur menaikkannya, jawaban mengelak menurunkannya. Makin tinggi, makin sulit naik. Salah ketik yang terlalu banyak juga melemahkan jawabanmu."},
+    {title:"Selamat bertugas", text:"Itu saja. Tidak ada jawaban yang aman untuk semua orang. Pilih yang menurutmu benar.", last:"Mulai menjawab"}
+  ]
+};
+
+// =====================================================================
+// START
+// =====================================================================
+buildHall(); buildFlood(); buildStages();
+$("muteBtn").onclick = () => {
+  A.on = !A.on;
+  if (A.master) A.master.gain.value = A.on ? 1 : 0;
+  const b = $("muteBtn");
+  b.classList.toggle("muted", !A.on);
+  b.setAttribute("aria-pressed", String(!A.on));
+  b.setAttribute("aria-label", A.on ? "Matikan suara" : "Nyalakan suara");
+};
+const MODE_DESC = {
+  santai: "Santai: tanpa batas waktu. Cocok untuk menikmati cerita.",
+  normal: "Normal: tiga pilihan jawaban dengan batas waktu yang longgar.",
+  sulit: "Sulit: semua jawaban terdengar masuk akal, bedanya tipis, dan waktunya lebih ketat."
+};
+// fictional headlines for the title-screen ticker (rendered twice for a seamless loop)
+const HEADLINES = [
+  "Banjir merendam tiga kecamatan, dana tanggul dipertanyakan",
+  "Kabut asap meliburkan 40 sekolah di Sendaru Barat",
+  "Harga beras naik untuk ketiga kalinya bulan ini",
+  "Menteri Koordinator: \u201cSemua masih terkendali\u201d",
+  "Bantuan sosial tak kunjung sampai ke warga terdampak",
+  "Anggota dewan termuda dilantik hari ini"
+];
+
+// ---------- cover art: rat officials + camera parallax (title screen only) ----------
+// Generator ported from the approved cover preview; the parallax loop stops once the title is hidden.
+(function(){
+      const SVG_NS = "http://www.w3.org/2000/svg";
+
+      /**
+       * Helper pembuatan elemen SVG ber-namespace
+       */
+      function svgEl(tag, attrs) {
+        const el = document.createElementNS(SVG_NS, tag);
+        if (attrs) {
+          Object.keys(attrs).forEach(function (key) {
+            el.setAttribute(key, String(attrs[key]));
+          });
+        }
+        return el;
+      }
+
+      /**
+       * Palet warna berdasarkan lapisan kedalaman & variasi bulu tikus
+       */
+      function getRatPalette(cfg) {
+        const isWarmFur = cfg.furTone === "warm";
+        if (cfg.tier === "far") {
+          return {
+            suit: "#0b0f16",
+            lapel: "#121824",
+            shirt: "#dcd4c4",
+            tie: cfg.tie || "#6e1c1c",
+            fur: isWarmFur ? "#5b5856" : "#4b5564",
+            furDark: isWarmFur ? "#474442" : "#39424f",
+            earInner: "#786062"
+          };
+        }
+        if (cfg.tier === "mid") {
+          return {
+            suit: "#0d111a",
+            lapel: "#161d2b",
+            shirt: "#e7dfd0",
+            tie: cfg.tie || "#7d2020",
+            fur: isWarmFur ? "#6a645e" : "#5b6575",
+            furDark: isWarmFur ? "#534e49" : "#454e5c",
+            earInner: "#8f6f72"
+          };
+        }
+        return {
+          suit: "#0f141e",
+          lapel: "#192130",
+          shirt: "#f2eadb",
+          tie: cfg.tie || "#8b2323",
+          fur: isWarmFur ? "#787067" : "#697383",
+          furDark: isWarmFur ? "#5e5750" : "#505966",
+          earInner: "#a17c7f"
+        };
+      }
+
+      /**
+       * Membangun satu tokoh pejabat berjas berkepala tikus yang sangat buncit.
+       * - Siluet jas tong/pear melebar di bagian tengah
+       * - Kemeja putih buncit membulat ke depan dengan bayangan lengkung bawah perut,
+       *   lipatan kain kencang, celah kancing meregang terbuka, dan dasi pendek tinggi
+       * - Pipi gembul & dagu ganda (double chin)
+       * - Ekspresi mengantuk berat ("sleepy"), tertawa lebar ("laugh"), atau menyeringai ("smirk")
+       * - Detail "nyepros" (noda saus merah-oranye & remah makanan) jika cfg.messy === true
+       */
+      function createRatOfficial(cfg) {
+        const palette = getRatPalette(cfg);
+        const outerG = svgEl("g", {
+          transform: "translate(" + cfg.cx + ", " + cfg.cy + ") scale(" + cfg.scale + ")"
+        });
+
+        const animClass =
+          cfg.expr === "laugh"
+            ? "cv-laugh"
+            : cfg.expr === "sleepy"
+            ? "cv-sleepy"
+            : "";
+
+        const innerG = svgEl("g", {
+          class: animClass,
+          style: "animation-delay:" + (cfg.delay || 0) + "s",
+          stroke: "#070a0e",
+          "stroke-width": "2.9",
+          "stroke-linejoin": "round",
+          "stroke-linecap": "round"
+        });
+
+        // 1. TUBUH BERJAS SANGAT BUNCIT (HEAVY BARREL / PEAR POTBELLY)
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-166 640 C-194 472 -182 226 -90 120 Q0 90 90 120 C182 226 194 472 166 640 Z",
+            fill: palette.suit
+          })
+        );
+
+        // Sorotan rim-light tipis di bahu jas agar siluet antar-pejabat tetap terbaca tajam
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-128 214 C-122 164 -106 135 -86 123 M128 214 C122 164 106 135 86 123",
+            fill: "none",
+            stroke: "#cbd5e1",
+            "stroke-width": "1.5",
+            opacity: "0.28"
+          })
+        );
+
+        // Kemeja putih buncit membulat menonjol ke depan
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-68 124 L0 198 L68 124 C136 205 158 366 118 594 Q0 632 -118 594 C-158 366 -136 205 -68 124 Z",
+            fill: palette.shirt
+          })
+        );
+
+        // Bayangan lengkung tebal di bawah perut buncit agar tampak menggantung berat
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-132 394 Q0 464 132 394 C126 472 112 540 96 588 Q0 624 -96 588 C-112 540 -126 472 -132 394 Z",
+            fill: "#c9beaa",
+            opacity: "0.64",
+            stroke: "none"
+          })
+        );
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-122 398 Q0 458 122 398",
+            fill: "none",
+            stroke: "#9e937f",
+            "stroke-width": "2.1"
+          })
+        );
+
+        // Sorotan cembung di puncak perut buncit
+        innerG.appendChild(
+          svgEl("ellipse", {
+            cx: "0",
+            cy: "290",
+            rx: "70",
+            ry: "50",
+            fill: "#ffffff",
+            opacity: "0.34",
+            stroke: "none"
+          })
+        );
+
+        // Garis belahan kemeja & celah kancing yang meregang terbuka menahan perut
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M0 144 L0 598",
+            stroke: "#b8ad98",
+            "stroke-width": "1.9"
+          })
+        );
+
+        [268, 328, 388].forEach(function (gapY, idx) {
+          innerG.appendChild(
+            svgEl("ellipse", {
+              cx: "0",
+              cy: gapY,
+              rx: idx === 1 ? "7.2" : "5.5",
+              ry: idx === 1 ? "14" : "11.5",
+              fill: "#362924",
+              "stroke-width": "1.5"
+            })
+          );
+        });
+
+        // Lipatan tarik kain horizontal yang kencang di seluruh lebar perut buncit
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-78 242 Q-32 229 -4 242 M78 242 Q32 229 4 242 M-94 300 Q-36 285 -4 300 M94 300 Q36 285 4 300 M-84 358 Q-32 344 -4 358 M84 358 Q32 344 4 358",
+            fill: "none",
+            stroke: "#a59984",
+            "stroke-width": "1.8"
+          })
+        );
+
+        // Kancing kemeja besar yang tampak hampir lepas
+        [242, 300, 358, 414].forEach(function (btnY) {
+          innerG.appendChild(
+            svgEl("circle", {
+              cx: "0",
+              cy: btnY,
+              r: "5.3",
+              fill: "#1c1816"
+            })
+          );
+        });
+
+        // Kerah jas & dasi pendek miring bertengger tinggi di atas puncak perut buncit
+        innerG.appendChild(
+          svgEl("polygon", {
+            points: "-68,118 -20,198 -50,213 -94,135",
+            fill: palette.lapel
+          })
+        );
+        innerG.appendChild(
+          svgEl("polygon", {
+            points: "68,118 20,198 50,213 94,135",
+            fill: palette.lapel
+          })
+        );
+        innerG.appendChild(
+          svgEl("polygon", {
+            points: "-10,128 10,128 24,186 7,204 -14,190",
+            fill: palette.tie
+          })
+        );
+
+        // Lengan gemuk melingkari sisi perut buncit
+        const armSide = cfg.armSide || (cfg.cx < 800 ? -1 : 1);
+        if (armSide < 0) {
+          innerG.appendChild(
+            svgEl("path", {
+              d: "M-138 184 C-174 270 -154 356 -70 374 C-49 378 -39 360 -56 345 C-106 326 -116 266 -95 202",
+              fill: palette.suit
+            })
+          );
+          innerG.appendChild(
+            svgEl("ellipse", {
+              cx: "-55",
+              cy: "360",
+              rx: "16",
+              ry: "11",
+              fill: palette.earInner
+            })
+          );
+        } else {
+          innerG.appendChild(
+            svgEl("path", {
+              d: "M138 184 C174 270 154 356 70 374 C49 378 39 360 56 345 C106 326 116 266 95 202",
+              fill: palette.suit
+            })
+          );
+          innerG.appendChild(
+            svgEl("ellipse", {
+              cx: "55",
+              cy: "360",
+              rx: "16",
+              ry: "11",
+              fill: palette.earInner
+            })
+          );
+        }
+
+        // 2. TELINGA & KEPALA TIKUS BERPIPI TEMBAM + DOUBLE CHIN
+        innerG.appendChild(svgEl("circle", { cx: "-54", cy: "-16", r: "26", fill: palette.furDark }));
+        innerG.appendChild(
+          svgEl("circle", { cx: "-51", cy: "-13", r: "14", fill: palette.earInner, stroke: "none" })
+        );
+        innerG.appendChild(svgEl("circle", { cx: "54", cy: "-16", r: "26", fill: palette.furDark }));
+        innerG.appendChild(
+          svgEl("circle", { cx: "51", cy: "-13", r: "14", fill: palette.earInner, stroke: "none" })
+        );
+
+        // Kontur kepala tikus dengan pipi gembul & dagu berlapis
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-63 6 C-63 -38 63 -38 63 6 C80 41 63 83 29 96 L0 107 L-29 96 C-63 83 -80 41 -63 6 Z",
+            fill: palette.fur
+          })
+        );
+
+        // Lipatan dagu ganda (double chin) tebal
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-35 86 Q0 106 35 86",
+            fill: "none",
+            "stroke-width": "2.3"
+          })
+        );
+        innerG.appendChild(
+          svgEl("path", {
+            d: "M-21 98 Q0 110 21 98",
+            fill: "none",
+            "stroke-width": "1.8",
+            opacity: "0.82"
+          })
+        );
+
+        // 3. EKSPRESI WAJAH TIKUS (Ngantuk Berat / Tertawa Lebar / Menyeringai Licik)
+        if (cfg.expr === "laugh") {
+          innerG.appendChild(
+            svgEl("path", {
+              d: "M-32 6 Q-20 -7 -8 6",
+              fill: "none",
+              "stroke-width": "3.1"
+            })
+          );
+          innerG.appendChild(
+            svgEl("path", {
+              d: "M8 6 Q20 -7 32 6",
+              fill: "none",
+              "stroke-width": "3.1"
+            })
+          );
+          innerG.appendChild(svgEl("ellipse", { cx: "0", cy: "25", rx: "9", ry: "6", fill: "#181315" }));
+          innerG.appendChild(
+            svgEl("path", {
+              d: "M-29 38 Q0 29 29 38 C25 70 12 77 0 77 C-12 77 -25 70 -29 38 Z",
+              fill: "#2c1215"
+            })
+          );
+          innerG.appendChild(
+            svgEl("path", {
+              d: "M-15 65 Q0 54 15 65 Q9 75 0 75 Q-9 75 -15 65 Z",
+              fill: "#a54247",
+              stroke: "none"
+            })
+          );
+          innerG.appendChild(
+            svgEl("rect", {
+              x: "-8",
+              y: "36",
+              width: "7.2",
+              height: "11",
+              rx: "1.2",
+              fill: "#f7f2e7",
+              "stroke-width": "1.7"
+            })
+          );
+          innerG.appendChild(
+            svgEl("rect", {
+              x: "0.8",
+              y: "36",
+              width: "7.2",
+              height: "11",
+              rx: "1.2",
+              fill: "#f7f2e7",
+              "stroke-width": "1.7"
+            })
+          );
+        } else if (cfg.expr === "sleepy") {
+          // Kelopak mata berat turun & kantung mata mengantuk
+          innerG.appendChild(
+            svgEl("ellipse", { cx: "-21", cy: "9", rx: "10.5", ry: "7.8", fill: "#f3ede1", "stroke-width": "1.9" })
+          );
+          innerG.appendChild(svgEl("circle", { cx: "-21", cy: "12.5", r: "2.6", fill: "#080b0f" }));
+          innerG.appendChild(
+            svgEl("path", {
+              d: "M-32 8.5 L-10 10.5 L-11 -1 L-31 -1 Z",
+              fill: palette.furDark,
+              "stroke-width": "1.8"
+            })
+          );
+          innerG.appendChild(
+            svgEl("path", { d: "M-30 19 Q-21 24.5 -12 19", fill: "none", "stroke-width": "1.6", opacity: "0.8" })
+          );
+
+          innerG.appendChild(
+            svgEl("ellipse", { cx: "21", cy: "9", rx: "10.5", ry: "7.8", fill: "#f3ede1", "stroke-width": "1.9" })
+          );
+          innerG.appendChild(svgEl("circle", { cx: "21", cy: "12.5", r: "2.6", fill: "#080b0f" }));
+          innerG.appendChild(
+            svgEl("path", {
+              d: "M10 10.5 L32 8.5 L31 -1 L11 -1 Z",
+              fill: palette.furDark,
+              "stroke-width": "1.8"
+            })
+          );
+          innerG.appendChild(
+            svgEl("path", { d: "M12 19 Q21 24.5 30 19", fill: "none", "stroke-width": "1.6", opacity: "0.8" })
+          );
+
+          // Hidung & mulut menguap/terkantuk dengan gigi tikus
+          innerG.appendChild(svgEl("ellipse", { cx: "0", cy: "28", rx: "8.8", ry: "5.8", fill: "#181315" }));
+          innerG.appendChild(svgEl("ellipse", { cx: "0", cy: "51", rx: "13", ry: "9", fill: "#291416" }));
+          innerG.appendChild(
+            svgEl("rect", {
+              x: "-6",
+              y: "42.5",
+              width: "5.6",
+              height: "7.5",
+              rx: "1",
+              fill: "#f7f2e7",
+              "stroke-width": "1.5"
+            })
+          );
+          innerG.appendChild(
+            svgEl("rect", {
+              x: "0.4",
+              y: "42.5",
+              width: "5.6",
+              height: "7.5",
+              rx: "1",
+              fill: "#f7f2e7",
+              "stroke-width": "1.5"
+            })
+          );
+        } else {
+          // Ekspresi "smirk": menyeringai licik dengan alis miring
+          innerG.appendChild(
+            svgEl("line", { x1: "-31", y1: "2", x2: "-10", y2: "7", "stroke-width": "2.7" })
+          );
+          innerG.appendChild(
+            svgEl("line", { x1: "31", y1: "2", x2: "10", y2: "7", "stroke-width": "2.7" })
+          );
+          innerG.appendChild(svgEl("circle", { cx: "-19", cy: "11", r: "2.9", fill: "#080b0f" }));
+          innerG.appendChild(svgEl("circle", { cx: "19", cy: "11", r: "2.9", fill: "#080b0f" }));
+          innerG.appendChild(svgEl("ellipse", { cx: "0", cy: "29", rx: "8.5", ry: "5.8", fill: "#181315" }));
+          innerG.appendChild(
+            svgEl("path", { d: "M-21 47 Q2 39 23 49", fill: "none", "stroke-width": "2.7" })
+          );
+          innerG.appendChild(
+            svgEl("rect", {
+              x: "3",
+              y: "44",
+              width: "5.5",
+              height: "7",
+              rx: "1",
+              fill: "#f7f2e7",
+              "stroke-width": "1.5"
+            })
+          );
+        }
+
+        // 4. DETAIL "NYEPROS" (Noda saus merah-oranye & remah makanan di mulut, dagu, & jas)
+        if (cfg.messy) {
+          const messyG = svgEl("g", { stroke: "none" });
+
+          // Noda saus merah-oranye di sudut mulut kiri-kanan & dagu
+          messyG.appendChild(
+            svgEl("path", {
+              d: "M-32 45 C-39 48 -38 56 -30 57 C-24 58 -22 50 -27 45 Z",
+              fill: "#c94326"
+            })
+          );
+          messyG.appendChild(
+            svgEl("path", {
+              d: "M28 46 C37 49 38 58 29 59 C22 60 21 52 26 46 Z",
+              fill: "#d44d2a"
+            })
+          );
+          messyG.appendChild(
+            svgEl("path", {
+              d: "M-11 66 C-14 75 -9 84 -4 83 C1 82 1 73 -4 67 Z",
+              fill: "#b8351c"
+            })
+          );
+          messyG.appendChild(
+            svgEl("circle", { cx: "13", cy: "71", r: "3.4", fill: "#c94326" })
+          );
+
+          // Remah makanan kuning-krem di sekitar bibir, dagu, dan kerah jas
+          const crumbs = [
+            { x: -25, y: 40, r: 2.3, fill: "#f7d560" },
+            { x: -17, y: 63, r: 2.6, fill: "#f3e2a6" },
+            { x: 6, y: 46, r: 2.0, fill: "#f7d560" },
+            { x: 22, y: 62, r: 2.7, fill: "#f5cb52" },
+            { x: 34, y: 44, r: 2.1, fill: "#f3e2a6" },
+            { x: -37, y: 62, r: 2.2, fill: "#f7d560" },
+            { x: -5, y: 88, r: 2.4, fill: "#f5cb52" },
+            { x: -32, y: 156, r: 2.6, fill: "#f7d560" },
+            { x: 36, y: 164, r: 2.8, fill: "#f3e2a6" },
+            { x: -24, y: 184, r: 2.2, fill: "#f5cb52" }
+          ];
+
+          crumbs.forEach(function (c) {
+            messyG.appendChild(
+              svgEl("circle", {
+                cx: c.x,
+                cy: c.y,
+                r: c.r,
+                fill: c.fill
+              })
+            );
+          });
+
+          innerG.appendChild(messyG);
+        }
+
+        outerG.appendChild(innerG);
+        return outerG;
+      }
+
+      /**
+       * Merakit seluruh 24 pejabat tikus sangat buncit di 3 lapisan kedalaman:
+       * - #svgFar      : 10 tikus galeri atas (1 tikus nyepros)
+       * - #svgMidBack  : 8 tikus sayap tengah (1 tikus nyepros)
+       * - #svgMidFront : 6 tikus pengapit depan (2 tikus nyepros)
+       * Kolom tengah cx=800 dikosongkan untuk kepala lingkaran putih tokoh utama.
+       */
+      function buildRatCrowd() {
+        const svgFar = document.getElementById("cvFar");
+        const svgMidBack = document.getElementById("cvMidBack");
+        const svgMidFront = document.getElementById("cvMidFront");
+
+        if (!svgFar || !svgMidBack || !svgMidFront) return;
+
+        // LAYER 1 (#svgFar): 10 pejabat tikus galeri atas (5 kiri, 5 kanan, jarak 145px)
+        const farRats = [
+          { cx: 105, cy: 170, scale: 0.62, expr: "sleepy", messy: false, tier: "far", furTone: "slate", delay: 0.1 },
+          { cx: 250, cy: 164, scale: 0.63, expr: "laugh", messy: true, tier: "far", furTone: "warm", delay: 0.5 },
+          { cx: 395, cy: 158, scale: 0.64, expr: "sleepy", messy: false, tier: "far", furTone: "slate", delay: 0.9 },
+          { cx: 540, cy: 154, scale: 0.64, expr: "sleepy", messy: false, tier: "far", furTone: "warm", delay: 0.3 },
+          { cx: 685, cy: 152, scale: 0.64, expr: "laugh", messy: false, tier: "far", furTone: "slate", delay: 0.7 },
+
+          { cx: 915, cy: 152, scale: 0.64, expr: "sleepy", messy: false, tier: "far", furTone: "warm", delay: 0.2 },
+          { cx: 1060, cy: 154, scale: 0.64, expr: "smirk", messy: false, tier: "far", furTone: "slate", delay: 0.8 },
+          { cx: 1205, cy: 158, scale: 0.64, expr: "sleepy", messy: false, tier: "far", furTone: "warm", delay: 0.4 },
+          { cx: 1350, cy: 164, scale: 0.63, expr: "laugh", messy: false, tier: "far", furTone: "slate", delay: 1.0 },
+          { cx: 1495, cy: 170, scale: 0.62, expr: "sleepy", messy: false, tier: "far", furTone: "warm", delay: 0.6 }
+        ];
+
+        // LAYER 2 (#svgMidBack): 8 pejabat tikus sayap tengah (4 kiri, 4 kanan, jarak 175px)
+        const midBackRats = [
+          { cx: 120, cy: 252, scale: 0.76, expr: "sleepy", messy: false, tier: "mid", furTone: "warm", delay: 0.2 },
+          { cx: 295, cy: 245, scale: 0.77, expr: "laugh", messy: false, tier: "mid", furTone: "slate", delay: 0.6 },
+          { cx: 470, cy: 239, scale: 0.78, expr: "sleepy", messy: false, tier: "mid", furTone: "warm", delay: 1.1 },
+          { cx: 645, cy: 235, scale: 0.78, expr: "smirk", messy: false, tier: "mid", furTone: "slate", delay: 0.4 },
+
+          { cx: 955, cy: 235, scale: 0.78, expr: "laugh", messy: false, tier: "mid", furTone: "warm", delay: 0.9 },
+          { cx: 1130, cy: 239, scale: 0.78, expr: "sleepy", messy: true, tier: "mid", furTone: "slate", delay: 0.3 },
+          { cx: 1305, cy: 245, scale: 0.77, expr: "sleepy", messy: false, tier: "mid", furTone: "warm", delay: 0.7 },
+          { cx: 1480, cy: 252, scale: 0.76, expr: "laugh", messy: false, tier: "mid", furTone: "slate", delay: 0.5 }
+        ];
+
+        // LAYER 3 (#svgMidFront): 6 pejabat tikus sangat buncit pengapit depan (3 kiri, 3 kanan, jarak 210px)
+        const midFrontRats = [
+          { cx: 165, cy: 350, scale: 0.93, expr: "sleepy", messy: false, tier: "near", furTone: "slate", armSide: -1, delay: 0.3 },
+          { cx: 375, cy: 342, scale: 0.95, expr: "laugh", messy: true, tier: "near", furTone: "warm", armSide: 1, delay: 0.8 },
+          { cx: 585, cy: 334, scale: 0.96, expr: "sleepy", messy: false, tier: "near", furTone: "slate", armSide: -1, tie: "#2a3444", delay: 0.1 },
+
+          { cx: 1015, cy: 334, scale: 0.96, expr: "laugh", messy: true, tier: "near", furTone: "warm", armSide: 1, tie: "#2a3444", delay: 0.6 },
+          { cx: 1225, cy: 342, scale: 0.95, expr: "sleepy", messy: false, tier: "near", furTone: "slate", armSide: -1, delay: 0.4 },
+          { cx: 1435, cy: 350, scale: 0.93, expr: "sleepy", messy: false, tier: "near", furTone: "warm", armSide: 1, delay: 0.9 }
+        ];
+
+        farRats.forEach(function (cfg) {
+          svgFar.appendChild(createRatOfficial(cfg));
+        });
+        midBackRats.forEach(function (cfg) {
+          svgMidBack.appendChild(createRatOfficial(cfg));
+        });
+        midFrontRats.forEach(function (cfg) {
+          svgMidFront.appendChild(createRatOfficial(cfg));
+        });
+      }
+  buildRatCrowd();
+  const world = $("cvWorld");
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !world) return;
+  let tx = 0, ty = 0, cx = 0, cy = 0;
+  const point = (x, y) => { tx = Math.max(-1, Math.min(1, x / innerWidth * 2 - 1)); ty = Math.max(-1, Math.min(1, y / innerHeight * 2 - 1)); };
+  const onMove = e => point(e.clientX, e.clientY);
+  const onTouch = e => { if (e.touches && e.touches.length) point(e.touches[0].clientX, e.touches[0].clientY); };
+  const reset = () => { tx = 0; ty = 0; };
+  addEventListener("mousemove", onMove, {passive:true});
+  addEventListener("touchmove", onTouch, {passive:true});
+  addEventListener("touchend", reset);
+  document.addEventListener("mouseleave", reset);
+  function loop(){
+    // the player left the title screen: stop the loop and drop the listeners
+    if ($("title").classList.contains("hidden")){
+      removeEventListener("mousemove", onMove); removeEventListener("touchmove", onTouch); removeEventListener("touchend", reset);
+      document.removeEventListener("mouseleave", reset);
+      return;
+    }
+    cx += (tx - cx) * .06; cy += (ty - cy) * .06;
+    world.style.transform = `translate3d(${(-cx * 6.5).toFixed(2)}px, ${(-cy * 3.8).toFixed(2)}px, 0) rotateX(${(-cy * 1.9).toFixed(3)}deg) rotateY(${(cx * 3.4).toFixed(3)}deg)`;
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+$("tickerRun").innerHTML = [...HEADLINES, ...HEADLINES].map(h => `<span>${h}</span>`).join("");
+// keys 1/2/3 pick a difficulty on the title screen
+document.addEventListener("keydown", e => {
+  if ($("title").classList.contains("hidden")) return;
+  const r = document.querySelector(`input[name=mode][value=${({"1":"santai","2":"normal","3":"sulit"})[e.key]}]`);
+  if (r){ r.checked = true; r.focus(); }
+});
+function askReset(){
+  const box = $("confirmBox"); box.classList.remove("hidden"); $("confirmNo").focus();
+  const close = () => { box.classList.add("hidden"); document.removeEventListener("keydown", onKey, true); typer.focus(); };
+  // capture phase: keep Enter/Escape away from the game while the dialog is open
+  const onKey = e => {
+    if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); close(); }
+    else if (e.key === "Enter"){ e.stopPropagation(); }
+  };
+  document.addEventListener("keydown", onKey, true);
+  $("confirmNo").onclick = close;
+  $("confirmYes").onclick = () => location.reload();
+}
+$("resetBtn").onclick = askReset;
+$("startBtn").onclick = () => {
+  audioInit(); A.ctx.resume(); music("judul");
+  S.mode = document.querySelector("input[name=mode]:checked").value;
+  S.relaxed = S.mode === "santai";
+  $("title").classList.add("hidden");
+  $("nameCard").classList.remove("hidden");
+  setTimeout(() => tour("kartu", TOUR_STEPS.kartu).then(() => $("nameInput").focus()), 50);
+};
+// Each word must start with a capital letter (Indonesian name convention).
+const NAME_RE = /^\p{Lu}[\p{L}'.-]*( \p{Lu}[\p{L}'.-]*)*$/u;
+async function submitName(){
+  const v = $("nameInput").value.trim().replace(/\s+/g, " ");
+  if (v.length < 2){ $("nameErr").textContent = "Nama minimal dua huruf."; return; }
+  if (!NAME_RE.test(v)){ $("nameErr").textContent = "Awali setiap kata dengan huruf kapital, misalnya: Sari Wulandari."; return; }
+  S.name = v; S.first = v.split(" ")[0];
+  S.sapa = document.querySelector("input[name=sapa]:checked").value;
+  $("nameCard").classList.add("hidden");
+  document.body.classList.remove("menu");
+  nameTags();
+  setTrust(50);
+  // skipping the Prolog also skips speed calibration: assume ~36 words per minute
+  if ($("skipProlog").checked) S.cps = 3;
+  else { await prolog(); await stageExit(); }
+  await play(1);
+}
+function nameTags(){ document.querySelectorAll(".p.me .tag").forEach(t => t.textContent = S.first); }
+// plays from chapter n to the end of the story
+async function play(n){
+  for (let i = n - 1; i < CHAPTERS.length; i++){ await CHAPTERS[i](); await stageExit(); }
+  await ending();
+}
+// continue from the saved chapter
+const saved = loadGame();
+if (saved){
+  $("contBtn").innerHTML = `Lanjutkan Bab ${saved.n}`;
+  $("contBtn").classList.remove("hidden");
+}
+$("contBtn").onclick = async () => {
+  const d = loadGame(); if (!d) return;
+  audioInit(); A.ctx.resume();
+  Object.assign(S, { name:d.name, first:d.name.split(" ")[0], sapa:d.sapa, mode:d.mode, relaxed:d.mode === "santai", cps:d.cps,
+    ev:new Set(d.ev), done:new Set(Array.from({length:d.n - 1}, (_, i) => i + 1)), promises:d.promises, safe:d.safe, flags:d.flags || {} });
+  if (d.all) Object.assign(ALL, d.all); // typing stats of the chapters already played
+  setTrust(d.trust); setElite(d.elite); setPromises();
+  $("title").classList.add("hidden");
+  document.body.classList.remove("menu");
+  nameTags();
+  await play(d.n);
+};
+// Signature pad on the name card. Pointer events cover mouse, trackpad, pen and touch;
+// the canvas is scaled for the screen's pixel density so the ink stays sharp.
+(function signPad(){
+  const cv = $("signPad"), cx = cv.getContext("2d"), clear = $("signClear");
+  let last = null, mid = null;
+  function fit(){
+    const r = cv.getBoundingClientRect(); if (!r.width) return;
+    const dpr = window.devicePixelRatio || 1, keep = S.sig ? new Image() : null;
+    if (keep) keep.src = S.sig;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx.lineCap = cx.lineJoin = "round"; cx.strokeStyle = "#1b2a5a"; cx.lineWidth = 2.2;
+    if (keep) keep.onload = () => cx.drawImage(keep, 0, 0, r.width, r.height);
+  }
+  const at = e => { const r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
+  cv.addEventListener("pointerdown", e => {
+    if (e.button > 0) return;
+    e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch {}
+    last = mid = at(e);
+    cx.beginPath(); cx.arc(last.x, last.y, cx.lineWidth / 2, 0, Math.PI * 2); cx.fillStyle = cx.strokeStyle; cx.fill();
+  });
+  cv.addEventListener("pointermove", e => {
+    if (!last) return;
+    // smooth the stroke: curve through the midpoints between samples
+    for (const ev of (e.getCoalescedEvents ? e.getCoalescedEvents() : [e])){
+      const p = at(ev), m = {x:(last.x + p.x) / 2, y:(last.y + p.y) / 2};
+      cx.beginPath(); cx.moveTo(mid.x, mid.y); cx.quadraticCurveTo(last.x, last.y, m.x, m.y); cx.stroke();
+      last = p; mid = m;
+    }
+  });
+  const end = () => { if (!last) return; last = mid = null; S.sig = cv.toDataURL("image/png"); clear.hidden = false; };
+  cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+  clear.onclick = () => { cx.clearRect(0, 0, cv.width, cv.height); S.sig = null; clear.hidden = true; };
+  new ResizeObserver(fit).observe(cv);
+})();
+// first visit: explain the game on the title screen (fonts first, so the card is measured at its real size)
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => setTimeout(() => {
+  if (!$("title").classList.contains("hidden")) tour("intro", TOUR_STEPS.intro);
+}, 400));
+$("nameBtn").onclick = submitName;
+$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); submitName(); } else click(.5); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !$("title").classList.contains("hidden")){ e.preventDefault(); (document.activeElement === $("contBtn") ? $("contBtn") : $("startBtn")).click(); }
+});
+</script>
+</body>
+</html>

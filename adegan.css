@@ -1,0 +1,313 @@
+/* =====================================================================
+   SUARA TERAKHIR: adegan Bab 2 sampai Bab 8 (2.5D, sama seperti aula dan banjir)
+   ===================================================================== */
+#scene.posko #stPosko,#scene.pod #stPod,#scene.asap #stAsap,#scene.kamar #stKamar,
+#scene.tv #stTV,#scene.sidang #stSidang,#scene.siaran #stSiaran{display:block}
+
+/* extra person parts */
+.p .mask{position:absolute;top:11px;left:50%;width:16px;height:8px;margin-left:-8px;border-radius:3px 3px 6px 6px;background:#e8e6df}
+.p.hero .mask{top:15px;width:20px;height:10px;margin-left:-10px}
+.p .helm{position:absolute;top:-4px;left:50%;width:28px;height:13px;margin-left:-14px;border-radius:14px 14px 3px 3px;background:#e0b43a}
+.p .sign{position:absolute;top:-30px;left:50%;transform:translateX(-50%);padding:3px 6px;background:#efe6cf;color:#3a1d1d;font:700 9px/1 Inter,sans-serif;white-space:nowrap;border:1px solid #8a7a5a}
+.p.mbr{transition:margin-bottom .5s cubic-bezier(.2,.7,.2,1),filter .5s}
+.p.mbr.up{filter:brightness(1.5);margin-bottom:12px}
+.p.mbr.up .b{height:44px}
+
+/* ---------- posko (Bab 2) ---------- */
+/* dusk over the kampung, a blue tarp canopy with hanging bulbs over the registration table, plastic chairs in front.
+   The comment phone covers the right third, so the detail sits on the left. */
+#scene.posko{background:linear-gradient(#141a26,#2a2f42 46%,#5a4436 72%,#3a3632)}
+#stPosko{--rim:rgba(255,205,130,.2)}
+.posko-kampung{left:-14%;right:-14%;bottom:22%;height:90px;background:#363c54;
+  clip-path:polygon(0 100%,0 55%,4% 30%,8% 55%,12% 55%,16% 26%,21% 55%,27% 55%,27% 40%,33% 40%,33% 55%,38% 22%,43% 55%,50% 55%,54% 34%,58% 55%,64% 55%,64% 42%,70% 42%,70% 55%,75% 28%,80% 55%,88% 55%,92% 36%,96% 55%,100% 55%,100% 100%)}
+.posko-tiang{width:3px;height:120px;background:#1c1f2a}
+.posko-tiang::before{content:"";position:absolute;left:-10px;top:8px;width:23px;height:2px;background:#1c1f2a}
+.posko-kabel{height:24px;border-bottom:1px solid rgba(20,22,30,.9);border-radius:0 0 50% 50%}
+.posko-tarp{width:300px;height:22px;background:linear-gradient(#2d5f8a,#244d70);clip-path:polygon(4% 0,96% 0,100% 100%,0 100%)}
+.posko-tarp::before,.posko-tarp::after{content:"";position:absolute;top:22px;width:4px;height:110px;background:#5a4a38}
+.posko-tarp::before{left:14px}.posko-tarp::after{right:14px}
+.posko-lampu{width:8px;height:10px;border-radius:50%;background:#ffd98a;box-shadow:0 0 14px 5px rgba(255,200,110,.5)}
+.posko-meja{width:150px;height:34px;background:linear-gradient(#8a6a44,#5e4630);border-top:3px solid #a9865a}
+.posko-meja::before{content:"";position:absolute;left:18px;top:-6px;width:26px;height:5px;background:#efe6cf;box-shadow:34px 1px 0 #e6dcc4,70px 0 0 #efe6cf}
+.posko-kursi{width:30px;height:34px;background:var(--kc,#b8322b);clip-path:polygon(10% 0,90% 0,90% 45%,100% 45%,100% 58%,88% 58%,96% 100%,82% 100%,76% 58%,24% 58%,18% 100%,4% 100%,12% 58%,0 58%,0 45%,10% 45%)}
+.ground{left:-10%;right:-10%;bottom:-45%;height:69%;background:linear-gradient(#4a4238,#2c2721)}
+.tent{width:150px;height:90px;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.tent::after{content:"";position:absolute;left:44%;right:44%;bottom:0;height:45%;background:rgba(0,0,0,.45)}
+.board{padding:6px 14px;background:#e9e1cc;color:#5a1f1f;font:800 12px/1 Inter,sans-serif;letter-spacing:.12em;white-space:nowrap;border:2px solid #7a5a3a}
+.crate{width:46px;height:30px;background:#9c7b4f;border:2px solid #6e5432;font:700 7px/26px Inter,sans-serif;color:#3a2a14;text-align:center;letter-spacing:.06em}
+.crate.empty{background:#7d6440;opacity:.8}
+.bulbs{left:4%;right:40%;top:14%;height:30px;border-top:1px solid #333;border-radius:0 0 50% 50%;
+  background:radial-gradient(circle at 8% 100%,#ffd77a 0 3px,transparent 4px) 0 0/12% 100% repeat-x;filter:drop-shadow(0 0 6px rgba(255,200,90,.8))}
+
+/* ---------- siniar studio (Bab 3) ---------- */
+/* a small studio at night: a window onto the city, a bookshelf, one warm pendant lamp over the desk, cables in front */
+#scene.pod{background:linear-gradient(#17121f,#251d31 60%,#15111b)}
+#stPod{--rim:rgba(255,205,140,.2)}
+.pod-jendela{width:150px;height:96px;border:5px solid #1a1422;
+  background:linear-gradient(90deg,transparent 48%,#1a1422 48% 52%,transparent 52%),radial-gradient(circle,#ffd98a 0 1.4px,transparent 2px) 0 40%/13px 11px,linear-gradient(#0d1226,#1a2040 70%,#262338)}
+.pod-rak{width:120px;height:110px;border:4px solid #2b1f1a;background:
+  linear-gradient(transparent 31%,#2b1f1a 31% 35%,transparent 35% 64%,#2b1f1a 64% 68%,transparent 68%),
+  repeating-linear-gradient(90deg,#6b2a2a 0 6px,#a8842f 6px 9px,#3d5a6b 9px 15px,#e9dcbd 15px 18px,#2b1f1a 18px 21px)}
+.pod-lampu{width:44px;height:16px;border-radius:22px 22px 4px 4px;background:#2a2230}
+.pod-lampu::before{content:"";position:absolute;left:21px;bottom:16px;width:2px;height:44px;background:#2a2230}
+.pod-lampu::after{content:"";position:absolute;left:12px;bottom:-5px;width:20px;height:6px;border-radius:50%;background:#ffe2a8;box-shadow:0 0 16px 6px rgba(255,205,130,.45)}
+.pod-gelas{width:12px;height:15px;border-radius:0 0 3px 3px;background:#efe6cf}
+.pod-gelas::after{content:"";position:absolute;right:-5px;top:3px;width:5px;height:7px;border:2px solid #efe6cf;border-left:0;border-radius:0 4px 4px 0}
+.pod-kabel{left:-12%;right:-12%;bottom:-4%;height:40px;border-top:3px solid #0d0a12;border-radius:50% 40% 0 0}
+.pod-mon{width:110px;height:64px;border-radius:4px;background:#0c0a10;box-shadow:inset 0 0 0 3px #1b1620}
+.foam{left:6%;right:6%;top:6%;bottom:28%;border-radius:6px;
+  background:repeating-linear-gradient(90deg,rgba(0,0,0,.25) 0 2px,transparent 2px 40px),repeating-linear-gradient(0deg,rgba(0,0,0,.25) 0 2px,transparent 2px 40px),linear-gradient(#3a2b4a,#2a1f37)}
+.neon{left:50%;top:14%;transform:translateX(-50%) translateZ(-200px);font:italic 900 28px/1 "Playfair Display",Georgia,serif;color:#ffe2a8;white-space:nowrap;
+  text-shadow:0 0 14px rgba(242,193,78,.35)}
+.onair{padding:5px 10px;border-radius:4px;background:#5a1414;color:#ffd0d0;font:800 11px/1 Inter,sans-serif;letter-spacing:.18em;box-shadow:0 0 14px rgba(255,60,60,.6);animation:onair 2s ease-in-out infinite}
+@keyframes onair{50%{box-shadow:0 0 4px rgba(255,60,60,.3);background:#461010}}
+.desk{left:12%;right:12%;bottom:12%;height:13%;border-radius:8px 8px 2px 2px;background:linear-gradient(#6b4a2b,#3e2a18)}
+.boom{width:4px;height:44px;background:#2b2b2b;transform-origin:bottom}
+.boom::after{content:"";position:absolute;top:-14px;left:-7px;width:18px;height:22px;border-radius:9px;background:#151515;box-shadow:inset 0 0 0 3px #333}
+.ring{width:70px;height:70px;border-radius:50%;border:5px solid #f4efe4;box-shadow:0 0 22px rgba(255,250,235,.55),inset 0 0 12px rgba(255,250,235,.4)}
+.monitor{padding:6px 10px;background:#0b0e14;border:3px solid #222;color:#e9e6df;font:600 10px/1.4 Inter,sans-serif;letter-spacing:.06em;white-space:nowrap}
+.monitor b{color:#ff6b6b}
+.tripod{width:40px;height:120px}
+.tripod::before{content:"";position:absolute;left:4px;top:0;width:32px;height:22px;border-radius:4px;background:#1c1c1c;box-shadow:12px 4px 0 -4px #333}
+.tripod::after{content:"";position:absolute;left:0;right:0;top:22px;bottom:0;background:linear-gradient(105deg,transparent 46%,#2a2a2a 46% 50%,transparent 50%),linear-gradient(75deg,transparent 46%,#2a2a2a 46% 50%,transparent 50%),linear-gradient(90deg,transparent 47%,#2a2a2a 47% 53%,transparent 53%)}
+
+/* ---------- kebakaran lahan (Bab 4) ---------- */
+/* roofs dissolving in yellow smoke, a pole and a warning banner, car headlights pushing through, a road barrier and
+   a moving veil of smoke in front */
+#stAsap{--rim:rgba(255,200,110,.22)}
+.asap-atap{left:-14%;right:-14%;bottom:24%;height:60px;background:rgba(150,95,45,.45);
+  clip-path:polygon(0 100%,0 50%,6% 20%,12% 50%,20% 50%,26% 25%,32% 50%,44% 50%,50% 15%,56% 50%,66% 50%,72% 30%,78% 50%,88% 50%,94% 22%,100% 50%,100% 100%)}
+.asap-spanduk{padding:5px 12px;background:#efe6cf;color:#7a1f1f;font:700 10px/1.2 Inter,sans-serif;white-space:nowrap;border-left:4px solid #7a1f1f}
+.asap-lampu{width:8px;height:8px;border-radius:50%;background:#fff1c8;box-shadow:16px 0 0 #fff1c8,0 0 18px 8px rgba(255,230,170,.35),16px 0 18px 8px rgba(255,230,170,.35)}
+.asap-pembatas{width:120px;height:26px;background:repeating-linear-gradient(135deg,#a32626 0 14px,#efe6cf 14px 28px);border-radius:2px}
+.asap-pembatas::before,.asap-pembatas::after{content:"";position:absolute;bottom:-18px;width:6px;height:18px;background:#3a2a1c}
+.asap-pembatas::before{left:10px}.asap-pembatas::after{right:10px}
+.asap-kabut{left:-20%;right:-20%;bottom:0;height:45%;background:radial-gradient(ellipse at 30% 60%,rgba(210,160,90,.28),transparent 60%),radial-gradient(ellipse at 75% 40%,rgba(200,150,80,.22),transparent 55%);
+  filter:blur(8px);animation:kabut 18s ease-in-out infinite alternate;pointer-events:none}
+@keyframes kabut{to{translate:8% 0}}
+#scene.asap{background:linear-gradient(#d49b3c,#b1712b 42%,#5c3b1f 74%,#2b1d12)}
+.sun{width:70px;height:70px;border-radius:50%;background:#e2552a;filter:blur(3px);opacity:.75;box-shadow:0 0 50px 20px rgba(226,85,42,.35)}
+.tree{width:10px;background:#1d140d;border-radius:3px}
+.tree::before,.tree::after{content:"";position:absolute;height:5px;background:#1d140d;border-radius:3px}
+.tree::before{width:34px;top:22%;left:2px;transform:rotate(-28deg);transform-origin:left}
+.tree::after{width:28px;top:40%;right:2px;transform:rotate(30deg);transform-origin:right}
+.burnt{left:-10%;right:-10%;bottom:-45%;height:67%;background:linear-gradient(#3a2414,#1a110a)}
+.ember{width:5px;height:5px;border-radius:50%;background:#ff9a3c;box-shadow:0 0 8px 2px rgba(255,120,40,.8);animation:ember 1.6s ease-in-out infinite}
+@keyframes ember{50%{opacity:.25}}
+.smoke{width:340px;height:120px;border-radius:50%;background:radial-gradient(rgba(200,170,120,.45),transparent 70%);filter:blur(6px);animation:smoke 24s linear infinite}
+@keyframes smoke{from{margin-left:-160px}to{margin-left:160px}}
+#haze{position:absolute;inset:0;pointer-events:none;display:none;z-index:1;background:linear-gradient(rgba(214,160,70,.28),rgba(150,95,40,.12));animation:haze 7s ease-in-out infinite alternate}
+#scene.asap #haze{display:block}
+@keyframes haze{to{opacity:.6}}
+
+/* ---------- kamar kerja malam (Bab 5) ---------- */
+/* 2 a.m. in a cramped room: a curtained window with a street lamp outside, a calendar, a shelf and a fan; the laptop
+   is the key light, cold on the face, throwing a big shadow on the wall. Detail stays left of the comment phone. */
+#scene.kamar{background:linear-gradient(#0a0e18,#111827 60%,#0d111c)}
+#stKamar{--rim:rgba(130,175,255,.32);--rimx:-6px}
+.kamar-dinding{left:-14%;right:-14%;top:-8%;bottom:20%;background:repeating-linear-gradient(90deg,#141a28 0 3px,#121724 3px 90px)}
+.kamar-tirai{top:4%;width:40px;height:64%;background:repeating-linear-gradient(90deg,#3a2224 0 7px,#4a2a2c 7px 14px);border-radius:0 0 8px 8px}
+.kamar-sorot{width:180px;height:110%;background:linear-gradient(100deg,transparent 30%,rgba(255,214,150,.07) 45%,transparent 60%);pointer-events:none}
+.kamar-kalender{width:40px;height:50px;background:#e9dcbd;border-top:8px solid #7a1f1f}
+.kamar-kalender::after{content:"";position:absolute;left:5px;right:5px;top:8px;bottom:6px;background:radial-gradient(circle,#8a8270 0 1px,transparent 1.5px) 0 0/6px 6px}
+.kamar-rak{width:90px;height:70px;border:3px solid #1d1a1c;background:linear-gradient(transparent 47%,#1d1a1c 47% 53%,transparent 53%),
+  repeating-linear-gradient(90deg,#3a2a2a 0 6px,#2a3440 6px 11px,#4a3a24 11px 15px,#1d1a1c 15px 17px)}
+.kamar-bayang{width:150px;height:190px;background:radial-gradient(circle at 50% 22%,rgba(0,0,0,.45) 0 32px,transparent 33px),radial-gradient(ellipse 60% 40% at 50% 62%,rgba(0,0,0,.4) 0 98%,transparent 100%);filter:blur(4px)}
+.kamar-pintu{width:60px;top:-10%;bottom:-20%;background:linear-gradient(90deg,#05070c 0 70%,#1a1f2c 70% 78%,#05070c 78%)}
+.window{left:12%;right:30%;top:6%;bottom:34%;border:6px solid #1d2433;background:
+  linear-gradient(90deg,transparent 49%,#1d2433 49% 51%,transparent 51%),
+  radial-gradient(circle,#ffd77a 0 1.5px,transparent 2px) 0 60%/18px 14px,
+  linear-gradient(#0b1430,#1a2346 70%,#2a2a3e)}
+.lamp{width:60px;height:60px;border-radius:50%;background:radial-gradient(rgba(255,214,140,.65),transparent 70%)}
+.laptop{width:70px;height:8px;background:#30343e;border-radius:2px}
+.laptop::before{content:"";position:absolute;left:6px;right:6px;bottom:8px;height:42px;background:#1b2a46;border:3px solid #30343e;border-bottom:0;box-shadow:0 0 30px 6px rgba(90,150,255,.35)}
+#scene.hot::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 70% 40%,rgba(210,40,40,.22),transparent 70%);animation:hot 1.8s ease-in-out infinite}
+@keyframes hot{50%{opacity:.4}}
+
+/* ---------- studio debat (Bab 6) ---------- */
+/* a dark studio with maroon and cream lines, a lighting truss whose spots hit the two lecterns, cameras with red
+   tally lights, floor monitors and audience heads in front */
+#scene.tv{background:linear-gradient(#06121f,#0c2643 55%,#071628)}
+#stTV{--rim:rgba(235,240,255,.22)}
+.tv-garis{left:-14%;right:-14%;top:-6%;bottom:30%;background:linear-gradient(90deg,transparent 8%,#5a1a1a 8% 8.6%,transparent 8.6% 91.4%,#5a1a1a 91.4% 92%,transparent 92%),
+  linear-gradient(transparent 88%,rgba(233,220,189,.18) 88% 88.6%,transparent 88.6%),#071321}
+.tv-rangka{left:-6%;right:-6%;top:-2%;height:14px;background:repeating-linear-gradient(60deg,#1f2a38 0 3px,transparent 3px 14px),linear-gradient(#2a3442,#1a222e);background-size:auto,100% 3px;background-repeat:repeat,repeat-x}
+.tv-lampu{width:22px;height:18px;border-radius:4px 4px 10px 10px;background:#1c242f;box-shadow:inset 0 -4px 0 #f4efe0}
+.tv-tally{position:absolute;left:12px;top:-6px;width:6px;height:6px;border-radius:50%;background:#e23b3b;box-shadow:0 0 6px 2px rgba(226,59,59,.55)}
+.tv-monlantai{width:90px;height:34px;background:linear-gradient(#141a22,#0a0e14);clip-path:polygon(12% 0,88% 0,100% 100%,0 100%)}
+.tv-monlantai::after{content:"";position:absolute;left:16%;right:16%;top:5px;height:14px;background:#1e3550;opacity:.8}
+.screen{left:14%;right:14%;top:5%;height:42%;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(120deg,#0e3a6b,#14518f 50%,#0e3a6b);box-shadow:0 0 40px rgba(60,140,255,.35);border:2px solid #2a6fb6}
+.screen b{font:900 28px/1 "Playfair Display",Georgia,serif;color:#fff;letter-spacing:.04em}
+.screen span{font:600 11px/1 Inter,sans-serif;color:#cfe2ff;letter-spacing:.2em;text-transform:uppercase}
+.floor{left:-10%;right:-10%;bottom:-45%;height:75%;background:linear-gradient(#0d2238,#050c16)}
+.lectern{width:70px;height:62px;border-radius:4px 4px 0 0;background:linear-gradient(#1a2a3e,#0d1726)}
+.lectern::after{content:"";position:absolute;left:8px;right:8px;top:10px;height:5px;border-radius:3px;background:var(--lc,#4aa3ff);box-shadow:0 0 12px var(--lc,#4aa3ff)}
+.modesk{width:110px;height:34px;border-radius:4px 4px 0 0;background:linear-gradient(#22344c,#121e2e)}
+
+/* ---------- ruang sidang paripurna (Bab 7) ---------- */
+/* tall windows with cold daylight under a ribbed ceiling, maroon curtains beside the emblem, a standing fan, the
+   tiered rows, and a wooden gallery railing with spectators in front */
+#scene.sidang{background:linear-gradient(#2a1a11,#3d281a 60%,#22160e)}
+#stSidang{--rim:rgba(190,210,235,.16)}
+.sidang-plafon{left:-14%;right:-14%;top:-8%;height:13%;background:repeating-linear-gradient(90deg,#2a1a10 0 10px,#3a2618 10px 70px)}
+.sidang-jendela{top:6%;width:56px;height:46%;border:4px solid #22160e;
+  background:linear-gradient(90deg,transparent 46%,#22160e 46% 54%,transparent 54%),linear-gradient(transparent 30%,#22160e 30% 33%,transparent 33% 66%,#22160e 66% 69%,transparent 69%),linear-gradient(#8a9bb0,#5d6f86)}
+.sidang-sinar{top:10%;width:120px;height:80%;margin-left:-32px;background:linear-gradient(rgba(170,195,225,.12),transparent 85%);clip-path:polygon(30% 0,70% 0,100% 100%,0 100%);filter:blur(3px)}
+.sidang-tirai{top:-4%;width:44px;height:52%;border-radius:0 0 10px 10px;background:repeating-linear-gradient(90deg,#651818 0 8px,#7a1f1f 8px 16px)}
+.sidang-pagar{left:-14%;right:-14%;bottom:-8%;height:38px;background:linear-gradient(#7a5434,#4a321d) 0 0/100% 9px no-repeat,repeating-linear-gradient(90deg,#4a321d 0 7px,transparent 7px 40px)}
+.panelwall{left:-10%;right:-10%;top:0;bottom:30%;background:repeating-linear-gradient(90deg,#4a3120 0 60px,#3a2618 60px 64px)}
+.emblem2{width:56px;height:56px;border-radius:50%;background:radial-gradient(circle,#e9c25a 0 38%,#b88a2b 39% 58%,#e9c25a 59%);box-shadow:0 0 0 3px #8a6e26}
+.bench{width:300px;height:44px;border-radius:4px 4px 0 0;background:linear-gradient(#6b4a2b,#4a321d);border-top:3px solid #a8842f}
+.chamberfloor{left:-10%;right:-10%;bottom:-45%;height:75%;background:linear-gradient(#4a1f1f,#2a1010)}
+.seatrow{height:16px;border-radius:3px;background:linear-gradient(#5a3e26,#3a2716)}
+.micstand{width:4px;height:70px;background:#222}
+.micstand::before{content:"";position:absolute;top:-6px;left:-4px;width:12px;height:12px;border-radius:50%;background:#444}
+
+/* ---------- studio siaran malam (Bab 8) ---------- */
+/* the crowd waits outside the window; inside, dimmed monitors, a lighting rig and one hard spot on the speaker,
+   with the production crew as silhouettes in front */
+#scene.siaran{background:linear-gradient(#05080f,#0b1120 60%,#080c16)}
+#stSiaran{--rim:rgba(255,232,190,.3)}
+#heroSi .b,#heroSi .h{box-shadow:inset 6px 0 0 rgba(255,232,190,.36),inset -6px 0 0 rgba(140,170,230,.24)}
+.siaran-layar{width:120px;height:72px;border:4px solid #161b26;background:linear-gradient(#0f1a2c,#0a111d);box-shadow:inset 0 0 0 1px #24304a}
+.siaran-layar::after{content:"";position:absolute;left:10px;right:10px;bottom:10px;height:10px;background:#7a1f1f;opacity:.7}
+.siaran-rangka{left:4%;right:4%;top:-2%;height:10px;background:linear-gradient(#232a36,#151a22)}
+.siaran-lampu{width:20px;height:16px;border-radius:4px 4px 9px 9px;background:#1c2230;box-shadow:inset 0 -4px 0 #fff1d6}
+.window2{left:8%;right:8%;top:5%;bottom:36%;border:6px solid #1a2030;overflow:hidden;background:linear-gradient(#060b1c,#101a35 60%,#1b1f30)}
+.window2 .crowd{position:absolute;left:0;right:0;bottom:0;height:40%;
+  background:radial-gradient(circle at 50% 30%,#05070c 0 7px,transparent 8px) 0 0/18px 22px,radial-gradient(ellipse at 50% 100%,#05070c 0 12px,transparent 13px) 0 6px/18px 22px}
+.window2 .lights{position:absolute;left:0;right:0;bottom:18%;height:30%;background:radial-gradient(circle,#fff2b0 0 1.5px,transparent 2px) 0 0/23px 17px;animation:twinkle 1.2s steps(2) infinite}
+@keyframes twinkle{50%{background-position:11px 8px}}
+.window2 .banner2{position:absolute;left:50%;bottom:44%;transform:translateX(-50%);padding:3px 10px;background:#efe6cf;color:#5a1f1f;font:800 10px/1 Inter,sans-serif;letter-spacing:.12em;white-space:nowrap}
+.newsdesk{left:22%;right:22%;bottom:10%;height:16%;border-radius:6px 6px 0 0;background:linear-gradient(#1c2638,#0d1320);border-top:3px solid #a32626}
+
+/* ---------- social media phone ---------- */
+/* the comment phone sits above the dialogue scrim (z-index 4) so the newest comments stay readable */
+#feed{position:absolute;right:2%;top:4%;bottom:4%;width:min(300px,36%);display:none;flex-direction:column;z-index:4;
+  border-radius:22px;border:4px solid #2d3240;background:rgba(12,14,20,.92);box-shadow:0 18px 40px rgba(0,0,0,.55);overflow:hidden;
+  transform:perspective(900px) rotateY(-8deg);transform-origin:right center}
+#scene.feedOn #feed{display:flex}
+.feed-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2e38;font:600 13px/1 Inter,sans-serif;color:#d8d4cb}
+.feed-head .dot{width:8px;height:8px;border-radius:50%;background:#e23b3b}
+#feedList{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:8px;padding:10px}
+.post{flex:none;padding:8px 10px;border-radius:10px;background:#171b24;border:1px solid #262b36;font-size:12.5px;line-height:1.4;color:#d8d4cb;animation:rise .35s ease backwards}
+.post b{display:block;font:700 11px/1.3 Inter,sans-serif;color:#8fb4ff;margin-bottom:2px}
+.post.me{border-left:3px solid var(--accent)}
+.post.me b{color:var(--accent)}
+.post.hot{background:#2a1416;border-color:#4a1f22}
+.post.hot b{color:#ff8a8a}
+#scene.hot #feed{border-color:#5a2226}
+@media (max-width:600px){#feed{top:4%;bottom:4%;width:44%;border-radius:16px}.post{font-size:11px}.feed-head{padding:8px 10px}}
+
+/* ---------- result extras ---------- */
+.result .deltas{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:8px;font-size:14px;font-weight:600}
+.delta-elite{color:#ff9a7a}
+.delta-prom{color:var(--accent)}
+.twist{margin:10px 0 4px;padding:10px 12px;background:#efe6cf;color:#1d1b16;border-radius:4px;font:900 17px/1.3 "Playfair Display",Georgia,serif;overflow-wrap:anywhere;transform:rotate(-.6deg)}
+.twist span{display:block;margin-bottom:4px;font:600 12px/1.2 Inter,sans-serif;color:#a32626}
+.end-sum{justify-content:center}
+
+@media (prefers-reduced-motion:reduce){.asap-kabut,.smoke,.ember,#haze,.onair,.window2 .lights,#scene.hot::after,.post{animation:none}}
+
+/* =====================================================================
+   Pass 2 (like the Bab 1 reference): few large figures, one warm key light with a visible cone,
+   a detailed middle ground and a soft, slightly blurred foreground
+   ===================================================================== */
+.fg-blur{left:0;right:0;top:0;bottom:0;filter:blur(1.2px)}
+.sil{width:86px;height:110px;border-radius:36px 36px 0 0;background:#07090d}
+.sil::before{content:"";position:absolute;top:-32px;left:50%;margin-left:-18px;width:36px;height:38px;border-radius:50%;background:#07090d}
+.motes i{position:absolute;width:2.5px;height:2.5px;border-radius:50%;background:rgba(255,226,172,.6);box-shadow:0 0 4px rgba(255,226,172,.45);animation:fl-mist var(--d,6s) linear infinite}
+
+/* Bab 2 posko at dusk */
+#scene.posko{background:#1a1a26}
+.ps-sky{left:-40%;right:-40%;top:-40%;bottom:-10%;background:linear-gradient(#1a2033,#3a3346 34%,#7a4c3c 62%,#b56a3c 78%,#5a3a2e)}
+.ps-sun{left:62%;bottom:30%;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,#ffcf8a,#f29a4a 45%,rgba(242,154,74,0) 70%);opacity:.85}
+.ps-hills{left:-40%;right:-40%;bottom:26%;height:18%;background:radial-gradient(ellipse 30% 90% at 20% 100%,#2c2430 68%,transparent 70%),radial-gradient(ellipse 36% 100% at 55% 100%,#2a2230 68%,transparent 70%),radial-gradient(ellipse 30% 85% at 86% 100%,#2e2632 68%,transparent 70%)}
+.ps-roofs{left:-30%;right:-30%;bottom:26%;height:44px;background:#251e26;
+  clip-path:polygon(0 100%,0 50%,3% 20%,8% 20%,11% 50%,14% 50%,17% 10%,24% 10%,27% 50%,33% 50%,36% 25%,42% 25%,45% 50%,52% 50%,55% 15%,62% 15%,65% 50%,71% 50%,74% 22%,80% 22%,83% 50%,88% 50%,91% 18%,97% 18%,100% 50%,100% 100%)}
+.ps-haze{left:-40%;right:-40%;bottom:18%;height:22%;background:linear-gradient(rgba(90,60,50,0),rgba(70,50,46,.7) 60%,rgba(44,36,34,.95))}
+.ps-tent{bottom:22%;width:var(--w,170px);height:var(--h,96px);background:linear-gradient(90deg,rgba(0,0,0,.25),transparent 30%,rgba(0,0,0,.35)),var(--tc,#2d5f8a);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.ps-tent::after{content:"";position:absolute;left:43%;width:14%;bottom:0;height:44%;background:#141018;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.ps-terpal{left:3%;bottom:22%;width:40%;height:150px;border-top:10px solid #2c6aa6;background:linear-gradient(rgba(20,30,48,.75),rgba(16,20,30,.9));border-radius:4px 4px 0 0;box-shadow:0 -4px 0 #1f4f80 inset}
+.ps-terpal::before,.ps-terpal::after{content:"";position:absolute;bottom:0;width:6px;top:-6px;background:#6b6f78}
+.ps-terpal::before{left:2%}.ps-terpal::after{right:2%}
+.ps-banner{left:8%;bottom:calc(22% + 112px);padding:4px 12px;white-space:nowrap;rotate:-1deg;border-radius:2px;background:linear-gradient(#e6dac0,#cbbb9c);color:#2a1f16;font:700 11px/1.3 Inter,sans-serif;box-shadow:0 4px 10px rgba(0,0,0,.5)}
+.ps-banner b{color:#8a1f1f}
+.ps-bulbs{left:2%;width:46%;bottom:calc(22% + 150px);height:30px}
+.ps-bulbs i{position:absolute;width:8px;height:8px;border-radius:50%;background:#fff0c4;box-shadow:0 0 10px 4px rgba(238,177,90,.6),0 0 26px 10px rgba(238,177,90,.2)}
+.ps-pole{bottom:22%;width:6px;height:200px;background:linear-gradient(90deg,#1a1820,#2e2a34 55%,#141218)}
+.ps-pole::before{content:"";position:absolute;top:10%;left:-13px;width:32px;height:3px;background:#1e1b24}
+.ps-ground{left:-30%;right:-30%;bottom:-70%;height:94%;background:linear-gradient(#4a3a30,#2e241f 40%,#1a1512)}
+.ps-puddle{height:16px;border-radius:50%;background:linear-gradient(90deg,transparent,rgba(242,170,100,.28),transparent);filter:blur(1px)}
+.ps-table{left:6%;bottom:12%;width:150px;height:46px;background:linear-gradient(#7a5a3a,#4e3824);border-top:4px solid #8a6a44;border-radius:2px}
+.ps-table::before,.ps-table::after{content:"";position:absolute;bottom:-26px;width:6px;height:26px;background:#3a2a1c}
+.ps-table::before{left:8px}.ps-table::after{right:8px}
+.ps-crate{width:54px;height:40px;display:grid;place-items:center;background:linear-gradient(#b08a52,#86663a);border:2px solid #5e4526;font:700 8px/1 Inter,sans-serif;color:#3a2810;letter-spacing:.06em;box-shadow:0 6px 12px rgba(0,0,0,.45)}
+.ps-crate.empty{background:linear-gradient(#8a7656,#6a5a42);color:#7a1f1f}
+.ps-sign{position:absolute;top:-34px;left:50%;translate:-50% 0;padding:4px 7px;white-space:nowrap;background:#efe6cf;color:#7a1f1f;font:700 9px/1.2 Inter,sans-serif;border:1px solid #b9a77f;rotate:-4deg;box-shadow:0 3px 6px rgba(0,0,0,.4)}
+.ps-sign::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:16px;background:#6b5230}
+.ps-chair{width:46px;height:52px;border-radius:6px 6px 2px 2px;background:var(--kc,#b8322b);box-shadow:inset 0 -18px 0 rgba(0,0,0,.25)}
+.ps-galon{width:30px;height:42px;border-radius:8px 8px 4px 4px;background:linear-gradient(90deg,rgba(120,170,220,.55),rgba(170,210,240,.75) 40%,rgba(90,140,190,.55));box-shadow:0 -6px 0 -2px #2c6aa6}
+
+/* Bab 5 kamar: a room at night, the laptop is the cold key light, the desk lamp the warm one */
+#scene.kamar{background:#0a0e18}
+.km-wall{left:-30%;right:-30%;top:-40%;bottom:-20%;background:repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 2px,transparent 2px 34px),linear-gradient(#141b2a,#10151f 70%,#0b0f17)}
+.km-win{left:52%;top:2%;width:240px;height:170px;border:8px solid #1d2230;background:linear-gradient(#0c1426,#18223a 70%,#22304c);overflow:hidden;box-shadow:inset 0 0 30px rgba(0,0,0,.6)}
+.km-win::before{content:"";position:absolute;left:0;right:0;bottom:0;height:46%;background:#0a101c;
+  clip-path:polygon(0 100%,0 40%,8% 40%,8% 10%,18% 10%,18% 50%,28% 50%,28% 25%,36% 25%,36% 0,46% 0,46% 45%,58% 45%,58% 20%,68% 20%,68% 55%,78% 55%,78% 15%,88% 15%,88% 40%,100% 40%,100% 100%)}
+.km-win::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 49%,#1d2230 49% 51%,transparent 51%),linear-gradient(transparent 49%,#1d2230 49% 51%,transparent 51%)}
+.km-win i{position:absolute;width:3px;height:4px;background:#e9c27a;opacity:.7;z-index:1}
+.km-rain{position:absolute;inset:0;z-index:2;opacity:.35;background:repeating-linear-gradient(104deg,transparent 0 14px,rgba(198,216,238,.4) 15px,transparent 16px);background-size:60px 90px;animation:km-rain .8s linear infinite}
+@keyframes km-rain{to{background-position:-20px 90px}}
+.km-curtain{top:-6%;width:56px;height:230px;background:repeating-linear-gradient(90deg,#2a1c22 0,#3a2630 8px,#22161b 16px);box-shadow:0 10px 24px rgba(0,0,0,.6)}
+.km-board{left:10%;top:6%;width:170px;height:120px;background:#5e4630;border:6px solid #3a2a1c;box-shadow:0 8px 20px rgba(0,0,0,.6)}
+.km-board i{position:absolute;width:var(--w,36px);height:var(--h,28px);background:#e6dcc4;rotate:var(--r,0deg);box-shadow:0 2px 4px rgba(0,0,0,.4)}
+.km-board i::before{content:"";position:absolute;left:5px;right:5px;top:6px;height:3px;background:#2a2420;box-shadow:0 6px 0 #8a8070,0 11px 0 #8a8070}
+.km-board i::after{content:"";position:absolute;left:50%;top:-3px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#c23a3a}
+.km-board svg{position:absolute;inset:0;width:100%;height:100%}
+.km-cal{left:2%;top:10%;width:46px;height:60px;background:#efe6cf;border-top:12px solid #a33;box-shadow:0 4px 10px rgba(0,0,0,.5)}
+.km-shelf{left:1%;top:44%;width:120px;height:12px;background:#3a2a1c;box-shadow:0 6px 10px rgba(0,0,0,.5)}
+.km-shelf i{position:absolute;bottom:12px;width:12px;height:var(--h,40px);background:var(--c,#6a3a3a)}
+.km-desk{left:6%;right:40%;bottom:6%;height:56px;border-radius:6px 6px 2px 2px;background:linear-gradient(#6b4a2b,#3e2a18);box-shadow:0 14px 30px rgba(0,0,0,.6)}
+.km-laptop{left:31%;bottom:calc(6% + 56px);width:96px;height:9px;background:#30343e;border-radius:2px}
+.km-laptop::before{content:"";position:absolute;left:8px;right:8px;bottom:9px;height:58px;background:linear-gradient(#2a4a7a,#1b2a46);border:3px solid #30343e;border-bottom:0;box-shadow:0 0 40px 10px rgba(90,150,255,.3)}
+.km-glow{left:30%;bottom:6%;width:340px;height:300px;margin-left:-120px;pointer-events:none;background:radial-gradient(ellipse at 50% 70%,rgba(110,160,255,.22),rgba(90,140,240,.06) 50%,transparent 72%)}
+.km-dlamp{left:12%;bottom:calc(6% + 56px);width:8px;height:70px;background:#262a32;rotate:-14deg;transform-origin:bottom}
+.km-dlamp::before{content:"";position:absolute;top:-10px;left:-14px;width:40px;height:20px;border-radius:20px 20px 4px 4px;background:#3a2e26;rotate:24deg}
+.km-dlamp::after{content:"";position:absolute;top:8px;left:-6px;width:14px;height:6px;border-radius:50%;background:#fff0c4;box-shadow:0 0 18px 6px rgba(238,177,90,.65)}
+.km-pool{left:6%;bottom:calc(6% + 40px);width:200px;height:36px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,200,130,.32),transparent 70%)}
+.km-phone{left:52%;bottom:calc(6% + 56px);width:30px;height:10px;border-radius:2px;background:#111;box-shadow:0 0 0 1px #333,0 -2px 12px 2px rgba(255,90,90,.5);animation:km-buzz 1.6s ease-in-out infinite}
+@keyframes km-buzz{0%,70%,100%{translate:0}74%{translate:-2px}78%{translate:2px}82%{translate:-1px}}
+.km-mug{left:44%;bottom:calc(6% + 56px);width:18px;height:20px;border-radius:2px 2px 5px 5px;background:#d8d0c0;box-shadow:6px 4px 0 -2px #d8d0c0}
+.km-door{left:-8%;bottom:-40%;width:90px;top:-40%;background:linear-gradient(90deg,#07090d,#141924);box-shadow:inset -6px 0 0 #1d2230}
+.km-chair{right:6%;bottom:-50%;width:120px;height:170px;border-radius:30px 30px 8px 8px;background:linear-gradient(#141821,#0a0c12)}
+.km-paper{width:22px;height:18px;border-radius:40%;background:#cfc6b2;box-shadow:inset -4px -3px 0 rgba(0,0,0,.2)}
+
+/* Bab 8 siaran: the final live broadcast */
+#scene.siaran{background:#05080f}
+.sr-back{left:-30%;right:-30%;top:-40%;bottom:-20%;background:radial-gradient(ellipse 60% 50% at 50% 30%,#141c30,#070a12 75%)}
+.sr-led{left:16%;right:16%;top:-6%;height:200px;border:6px solid #11151e;background:linear-gradient(#0d1a33,#0a1224);overflow:hidden;box-shadow:0 0 50px rgba(60,110,200,.25)}
+.sr-led::before{content:"";position:absolute;inset:0;background:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1.5px) 0 0/6px 6px}
+.sr-crowd{position:absolute;left:0;right:0;bottom:0;height:52%;background:radial-gradient(circle at 10px 22px,#1a2a48 9px,transparent 10px) 0 0/22px 40px,radial-gradient(circle at 21px 26px,#16243e 9px,transparent 10px) 0 6px/22px 40px;opacity:.95}
+.sr-crowd::after{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(255,220,150,.9) 1.5px,transparent 2.5px) 0 0/37px 23px;opacity:.6;animation:sr-tw 2.4s ease-in-out infinite alternate}
+@keyframes sr-tw{to{opacity:.25;background-position:4px 3px}}
+.sr-title{position:absolute;left:0;right:0;top:24%;text-align:center;font:700 26px/1 "Playfair Display",Georgia,serif;letter-spacing:.06em;color:#f2e6cc;text-shadow:0 0 18px rgba(255,210,150,.4)}
+.sr-wave{position:absolute;left:24%;right:24%;top:44%;height:22px;background:repeating-linear-gradient(90deg,rgba(255,120,120,.85) 0 3px,transparent 3px 7px);
+  -webkit-mask:linear-gradient(90deg,transparent,#000 20% 80%,transparent);mask:linear-gradient(90deg,transparent,#000 20% 80%,transparent);animation:sr-wave .9s ease-in-out infinite alternate;transform-origin:center}
+@keyframes sr-wave{from{scale:1 .35}to{scale:1 1}}
+.sr-truss{left:-20%;right:-20%;top:-14%;height:14px;background:repeating-linear-gradient(45deg,#2a2f3a 0 3px,transparent 3px 12px),repeating-linear-gradient(-45deg,#2a2f3a 0 3px,transparent 3px 12px);border-block:3px solid #2a2f3a}
+.sr-can{top:-12%;width:22px;height:30px;border-radius:4px 4px 10px 10px;background:#1a1d24;box-shadow:inset 0 -4px 0 #fff3d6,0 10px 22px 4px rgba(255,236,200,.35)}
+.sr-beam{top:-8%;width:280px;height:120%;margin-left:-129px;pointer-events:none;background:linear-gradient(rgba(255,236,200,.18),rgba(255,236,200,.04) 80%,transparent);clip-path:polygon(46% 0,54% 0,100% 100%,0 100%)}
+.sr-floor{left:-30%;right:-30%;bottom:-70%;height:92%;background:linear-gradient(#10141e,#0a0d14 50%,#06080c)}
+.sr-floor::after{content:"";position:absolute;left:50%;top:4%;width:300px;height:60px;margin-left:-150px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,236,200,.18),transparent 70%)}
+.sr-desk{left:50%;bottom:6%;width:340px;height:70px;margin-left:-170px;border-radius:10px 10px 2px 2px;background:linear-gradient(#1c2232,#10141e);border-top:3px solid #7a1f1f;box-shadow:0 18px 40px rgba(0,0,0,.7)}
+.sr-desk::after{content:"KAMI MENDENGAR";position:absolute;left:50%;top:22px;translate:-50% 0;font:700 11px/1 Inter,sans-serif;letter-spacing:.3em;color:#c9b38a}
+.sr-mon{bottom:14%;width:120px;height:74px;border:4px solid #1a1d24;background:linear-gradient(#1b2a46,#0e1626);box-shadow:0 0 22px rgba(80,130,220,.25)}
+.sr-mon::before{content:"";position:absolute;left:50%;bottom:0;width:30px;height:44px;margin-left:-15px;border-radius:15px 15px 2px 2px;background:#cfd4dc;box-shadow:0 -26px 0 -6px #c99a74}
+.sr-mon::after{content:"LANGSUNG";position:absolute;left:6px;top:6px;padding:2px 4px;background:#a32626;color:#fff;font:700 7px/1 Inter,sans-serif;letter-spacing:.1em}
+.sr-prompter{left:50%;bottom:-30%;width:120px;height:80px;margin-left:-60px;background:linear-gradient(#1a1d24,#0c0e12);border-radius:4px}
+.sr-prompter::before{content:"";position:absolute;left:8px;right:8px;top:-34px;height:40px;background:linear-gradient(rgba(140,180,240,.25),rgba(140,180,240,.06));border:2px solid #2a2f3a;transform:skewX(-8deg)}
+.p .headset{position:absolute;top:-2px;left:50%;width:30px;height:16px;margin-left:-15px;border:3px solid #333;border-bottom:0;border-radius:15px 15px 0 0}
+@media (max-width:600px){#stPosko .p:not(.back),#stKamar .p,#stSiaran .p:not(.back){scale:.8;transform-origin:bottom center}.sr-led{left:2%;right:2%}.sr-title{font-size:18px}.km-win{left:46%;width:180px}.km-board{width:130px}}
+@media (prefers-reduced-motion:reduce){.motes i,.km-rain,.km-phone,.sr-crowd::after,.sr-wave{animation:none}}
