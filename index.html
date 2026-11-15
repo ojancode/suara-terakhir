@@ -1022,34 +1022,26 @@ function loadCam(){
   fetch("audio/sfx/kamera.mp3").then(r => r.ok ? r.arrayBuffer() : null)
     .then(b => b && A.ctx.decodeAudioData(b)).then(buf => { if (buf) camBuf = buf; }).catch(() => {});
 }
-// audio/sfx/ketik.mp3: about 7 s of continuous keyboard typing, looped while the name is typed
-// and while a chapter's opening title types itself
-let ketikBuf = null, ketikNow = null, ketikOff = 0;
+// audio/sfx/ketik.mp3 is ~7 s of real typing; these are the start times (seconds) of its 30 single keystrokes.
+// Every key the player presses plays one of them, so the sound follows the player's own speed.
+const KEY_HITS = [.375,.5,.59,.815,1.255,1.905,2.235,2.385,2.46,2.555,2.645,2.755,2.865,2.985,3.14,3.27,3.41,3.895,4.07,4.285,4.45,4.545,4.915,5.38,5.55,6.15,6.245,6.33,6.43,6.545];
+let ketikBuf = null, lastHit = -1;
 function loadKetik(){
   fetch("audio/sfx/ketik.mp3").then(r => r.ok ? r.arrayBuffer() : null)
     .then(b => b && A.ctx.decodeAudioData(b)).then(buf => { if (buf) ketikBuf = buf; }).catch(() => {});
 }
-function typingSound(on){
-  if (!A.ctx || !ketikBuf) return false; // not loaded (or missing): callers fall back to the synth click
-  if (on){
-    if (ketikNow) return true;
-    const s = A.ctx.createBufferSource(), g = gainN(0);
-    s.buffer = ketikBuf; s.loop = true; s.connect(g).connect(A.sfx);
-    g.gain.linearRampToValueAtTime(.7, now() + .04);
-    s.start(now(), Math.random() * (ketikBuf.duration - 1)); // random start point, so it never sounds the same twice
-    ketikNow = { s, g };
-  } else if (ketikNow){
-    const { s, g } = ketikNow; ketikNow = null;
-    g.gain.cancelScheduledValues(now()); g.gain.setValueAtTime(g.gain.value, now()); g.gain.linearRampToValueAtTime(0, now() + .12);
-    s.stop(now() + .15);
-  }
-  return true;
+// one keystroke; falls back to the synth click while the file is loading or missing
+function keyHit(vol = 1){
+  if (!A.ctx) return;
+  if (!ketikBuf){ click(.5 * vol); return; }
+  let k; do k = Math.floor(Math.random() * KEY_HITS.length); while (k === lastHit); // never the same key twice in a row
+  lastHit = k;
+  const t = now(), s = A.ctx.createBufferSource(), g = gainN(.9 * vol);
+  s.buffer = ketikBuf; s.playbackRate.value = .95 + Math.random() * .1; s.connect(g).connect(A.sfx);
+  g.gain.setValueAtTime(.9 * vol, t + .06); g.gain.linearRampToValueAtTime(0, t + .1); // short tail, so fast typing stays crisp
+  s.start(t, Math.max(0, KEY_HITS[k] - .008), .11);
 }
-// one key press in a text field: keep the typing loop going until the keys stop for a moment
-function typingKey(){
-  if (!typingSound(true)){ click(.5); return; }
-  clearTimeout(ketikOff); ketikOff = setTimeout(() => typingSound(false), 260);
-}
+const typingKey = () => keyHit();
 function shutter(){
   if (!A.ctx) return;
   if (!camBuf){ click(.8); setTimeout(() => click(.5), 60); return; }
@@ -1489,14 +1481,14 @@ const S = { done:new Set(), trust:50, elite:0, cps:3, relaxed:false, mode:"norma
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 // Types text into node. With a voice duration, the speed follows the recording.
-async function typeOut(node, text, {cps = 32, vol = .5, dur = null, blip = null} = {}){
+async function typeOut(node, text, {cps = 32, vol = .5, dur = null, blip = null, keys = false} = {}){
   const rate = dur ? text.length / Math.max(.5, dur * .9) : cps;
   node.classList.add("caret");
   for (let i = 0; i < text.length; i++){
     if (S.skip){ node.textContent = text; break; }
     node.textContent = text.slice(0, i + 1);
     if (blip){ if (i % 2 === 0 && /\p{L}/u.test(text[i])) blip(); } // one syllable every 2 letters
-    else if (vol && text[i] !== " ") click(vol);
+    else if (text[i] !== " ") keys ? keyHit(.8) : click(vol); // keys: one recorded keystroke per letter
     let ms = 1000 / rate;
     if (!dur && ".,?!:".includes(text[i])) ms += 160;
     await wait(ms);
@@ -1535,10 +1527,9 @@ function card({parts, after = "", btn, vo, voFrom = 0, mark = "", alt = ""}){
     const narr = blipFor("narator");
     for (let i = 0; i < parts.length; i++){
       const spoken = vo && i >= voFrom;
-      // a chapter's opening card types its headings to the recorded keyboard sound
-      const keys = !spoken && /_buka$/.test(vo || "") && typingSound(true);
-      await typeOut(nodes[i], parts[i].text, {cps: spoken ? 26 : 30, vol: keys ? 0 : .55, blip: spoken ? narr : null});
-      if (keys) typingSound(false);
+      // a chapter's opening card types every line (title and story) to the recorded keyboard sound
+      const keys = /_buka$/.test(vo || "");
+      await typeOut(nodes[i], parts[i].text, {cps: spoken ? 26 : 30, vol:.55, blip: spoken && !keys ? narr : null, keys});
       if (parts[i].tag === "h1") nodes[i].classList.add("done");
       if (!S.skip) await wait(250);
     }
@@ -1924,8 +1915,10 @@ typer.addEventListener("input", () => {
   S.typed = typer.value;
   if (grew){
     const k = S.typed.length - 1, target = S.targets[bestTarget()];
-    click(.55, S.typed[k] !== target[k]);
-    recKey(S.typed[k] === target[k]);
+    const wrong = S.typed[k] !== target[k];
+    // correct keys play a recorded keystroke; a wrong key still gets the dull synth click
+    if (wrong) click(.55, true); else typingKey();
+    recKey(!wrong);
   }
   render();
 });
@@ -2938,7 +2931,7 @@ $("contBtn").onclick = async () => {
   if (!$("title").classList.contains("hidden")) tour("intro", TOUR_STEPS.intro);
 }, 400));
 $("nameBtn").onclick = submitName;
-$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); typingSound(false); submitName(); } else typingKey(); });
+$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); submitName(); } else typingKey(); });
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && !$("title").classList.contains("hidden")){ e.preventDefault(); (document.activeElement === $("contBtn") ? $("contBtn") : $("startBtn")).click(); }
 });
