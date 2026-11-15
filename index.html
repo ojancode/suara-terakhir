@@ -972,7 +972,7 @@ function audioInit(){
   const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   A.noise = buf;
-  loadCam();
+  loadCam(); loadKetik();
 }
 function now(){ return A.ctx.currentTime; }
 function noiseSrc(loop){ const s = A.ctx.createBufferSource(); s.buffer = A.noise; s.loop = !!loop; return s; }
@@ -1021,6 +1021,34 @@ let camBuf = null;
 function loadCam(){
   fetch("audio/sfx/kamera.mp3").then(r => r.ok ? r.arrayBuffer() : null)
     .then(b => b && A.ctx.decodeAudioData(b)).then(buf => { if (buf) camBuf = buf; }).catch(() => {});
+}
+// audio/sfx/ketik.mp3: about 7 s of continuous keyboard typing, looped while the name is typed
+// and while a chapter's opening title types itself
+let ketikBuf = null, ketikNow = null, ketikOff = 0;
+function loadKetik(){
+  fetch("audio/sfx/ketik.mp3").then(r => r.ok ? r.arrayBuffer() : null)
+    .then(b => b && A.ctx.decodeAudioData(b)).then(buf => { if (buf) ketikBuf = buf; }).catch(() => {});
+}
+function typingSound(on){
+  if (!A.ctx || !ketikBuf) return false; // not loaded (or missing): callers fall back to the synth click
+  if (on){
+    if (ketikNow) return true;
+    const s = A.ctx.createBufferSource(), g = gainN(0);
+    s.buffer = ketikBuf; s.loop = true; s.connect(g).connect(A.sfx);
+    g.gain.linearRampToValueAtTime(.7, now() + .04);
+    s.start(now(), Math.random() * (ketikBuf.duration - 1)); // random start point, so it never sounds the same twice
+    ketikNow = { s, g };
+  } else if (ketikNow){
+    const { s, g } = ketikNow; ketikNow = null;
+    g.gain.cancelScheduledValues(now()); g.gain.setValueAtTime(g.gain.value, now()); g.gain.linearRampToValueAtTime(0, now() + .12);
+    s.stop(now() + .15);
+  }
+  return true;
+}
+// one key press in a text field: keep the typing loop going until the keys stop for a moment
+function typingKey(){
+  if (!typingSound(true)){ click(.5); return; }
+  clearTimeout(ketikOff); ketikOff = setTimeout(() => typingSound(false), 260);
 }
 function shutter(){
   if (!A.ctx) return;
@@ -1149,7 +1177,7 @@ const AMBIENCE = {
     return () => { m.stop(); lfo.stop(); };
   }
 };
-const BGM_ALIAS = { posko:"judul", siniar:"akhir_baik", asap:"banjir", fitnah:"akhir_buruk", debat:"aula", sidang:"banjir", siaran:"judul" };
+const BGM_ALIAS = { menu:"judul", posko:"judul", siniar:"akhir_baik", asap:"banjir", fitnah:"akhir_buruk", debat:"aula", sidang:"banjir", siaran:"judul" };
 // gavel knock for the council session
 function gavel(n = 2){
   if (!A.ctx) return;
@@ -1468,7 +1496,7 @@ async function typeOut(node, text, {cps = 32, vol = .5, dur = null, blip = null}
     if (S.skip){ node.textContent = text; break; }
     node.textContent = text.slice(0, i + 1);
     if (blip){ if (i % 2 === 0 && /\p{L}/u.test(text[i])) blip(); } // one syllable every 2 letters
-    else if (text[i] !== " ") click(vol);
+    else if (vol && text[i] !== " ") click(vol);
     let ms = 1000 / rate;
     if (!dur && ".,?!:".includes(text[i])) ms += 160;
     await wait(ms);
@@ -1507,7 +1535,10 @@ function card({parts, after = "", btn, vo, voFrom = 0, mark = "", alt = ""}){
     const narr = blipFor("narator");
     for (let i = 0; i < parts.length; i++){
       const spoken = vo && i >= voFrom;
-      await typeOut(nodes[i], parts[i].text, {cps: spoken ? 26 : 30, vol:.55, blip: spoken ? narr : null});
+      // a chapter's opening card types its headings to the recorded keyboard sound
+      const keys = !spoken && /_buka$/.test(vo || "") && typingSound(true);
+      await typeOut(nodes[i], parts[i].text, {cps: spoken ? 26 : 30, vol: keys ? 0 : .55, blip: spoken ? narr : null});
+      if (keys) typingSound(false);
       if (parts[i].tag === "h1") nodes[i].classList.add("done");
       if (!S.skip) await wait(250);
     }
@@ -2814,8 +2845,12 @@ function askReset(){
   $("confirmYes").onclick = () => location.reload();
 }
 $("resetBtn").onclick = askReset;
+// title-screen backsound (audio/bgm/menu): browsers only allow sound after a gesture, so it starts on the first click or key
+const titleMusic = () => { if ($("title").classList.contains("hidden")) return; audioInit(); A.ctx.resume(); music("menu"); };
+addEventListener("pointerdown", titleMusic, {once:true, capture:true});
+addEventListener("keydown", titleMusic, {once:true, capture:true});
 $("startBtn").onclick = () => {
-  audioInit(); A.ctx.resume(); music("judul");
+  audioInit(); A.ctx.resume(); music("menu");
   S.mode = document.querySelector("input[name=mode]:checked").value;
   S.relaxed = S.mode === "santai";
   $("title").classList.add("hidden");
@@ -2903,7 +2938,7 @@ $("contBtn").onclick = async () => {
   if (!$("title").classList.contains("hidden")) tour("intro", TOUR_STEPS.intro);
 }, 400));
 $("nameBtn").onclick = submitName;
-$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); submitName(); } else click(.5); });
+$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); typingSound(false); submitName(); } else typingKey(); });
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && !$("title").classList.contains("hidden")){ e.preventDefault(); (document.activeElement === $("contBtn") ? $("contBtn") : $("startBtn")).click(); }
 });
