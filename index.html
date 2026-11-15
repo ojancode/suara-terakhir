@@ -1512,7 +1512,7 @@ async function say(who, text, node, {vo = null, folder = "narator"} = {}){
 }
 
 // Full-screen chapter card. parts are typed one after another.
-// With vo set, the narrator babbles from part voFrom on (vo is only a marker; no file is played).
+// With vo set, parts from voFrom on are typed a little slower, like narration (vo is only a marker; no file is played).
 // mark: large outlined numeral behind the title (chapter number), purely decorative.
 // alt: label of a second button (Esc); the card then resolves with "alt" instead of undefined.
 function card({parts, after = "", btn, vo, voFrom = 0, mark = "", alt = ""}){
@@ -1523,13 +1523,10 @@ function card({parts, after = "", btn, vo, voFrom = 0, mark = "", alt = ""}){
     const nodes = parts.map(p => { const n = document.createElement(p.tag); if (p.cls) n.className = p.cls; box.appendChild(n); return n; });
     const skipHint = el(c, "skip", "", "<kbd>Enter</kbd> untuk mempercepat");
     S.typing = true; S.skip = false;
-    // the narrator babbles the parts it would read aloud (from voFrom on); headings get key clicks
-    const narr = blipFor("narator");
     for (let i = 0; i < parts.length; i++){
       const spoken = vo && i >= voFrom;
-      // a chapter's opening card types every line (title and story) to the recorded keyboard sound
-      const keys = /_buka$/.test(vo || "");
-      await typeOut(nodes[i], parts[i].text, {cps: spoken ? 26 : 30, vol:.55, blip: spoken && !keys ? narr : null, keys});
+      // every full-screen card (chapter openings, chapter-end newspapers, endings) types each line to the recorded keyboard sound
+      await typeOut(nodes[i], parts[i].text, {cps: spoken ? 26 : 30, vol:.55, keys:true});
       if (parts[i].tag === "h1") nodes[i].classList.add("done");
       if (!S.skip) await wait(250);
     }
