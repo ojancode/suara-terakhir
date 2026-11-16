@@ -311,3 +311,7 @@
 .p .headset{position:absolute;top:-2px;left:50%;width:30px;height:16px;margin-left:-15px;border:3px solid #333;border-bottom:0;border-radius:15px 15px 0 0}
 @media (max-width:600px){#stPosko .p:not(.back),#stKamar .p,#stSiaran .p:not(.back){scale:.8;transform-origin:bottom center}.sr-led{left:2%;right:2%}.sr-title{font-size:18px}.km-win{left:46%;width:180px}.km-board{width:130px}}
 @media (prefers-reduced-motion:reduce){.motes i,.km-rain,.km-phone,.sr-crowd::after,.sr-wave{animation:none}}
+
+/* English labels (html lang is set by the loader in index.html) */
+html[lang=en] .sr-desk::after{content:"WE HEAR YOU"}
+html[lang=en] .sr-mon::after{content:"LIVE"}

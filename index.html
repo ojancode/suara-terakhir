@@ -733,6 +733,14 @@ button.danger:hover{background:var(--bad);color:#111}
 .stats-title{font:500 14px/1.3 Inter,sans-serif;color:#a3a8b4;margin-bottom:10px;text-align:center}
 @media (prefers-reduced-motion:reduce){.chap-after > *,.chap-mark{animation:none}.overlay.chapter h1::before{transition:none}}
 @media (max-width:480px){.overlay.chapter{padding:40px 14px 56px}.brief{padding:14px 16px 16px;transform:none}.mtr .meter{width:90px}}
+/* language switch (title screen) */
+#langSw{position:absolute;top:10px;right:16px;z-index:3;display:flex;border:1px solid rgba(233,230,223,.35);border-radius:8px;overflow:hidden;background:rgba(10,13,18,.55)}
+#langSw button{min-width:44px;min-height:32px;padding:0 10px;border:0;background:none;color:#e9e6df;font:700 12px/1 Inter,sans-serif;letter-spacing:.08em;cursor:pointer}
+#langSw button[aria-pressed=true]{background:#e9e6df;color:#0a0d12}
+#langSw button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media (max-width:600px){#langSw{top:34px;left:12px;right:auto}#langSw button{min-height:28px;min-width:40px}}
+html[lang=en] .opt.ev::before{content:"Evidence \00B7  " attr(data-tag)}
+html[lang=en] .overlay.chapter .headline::before{content:"SENDARU NEWS \00B7  SPECIAL EDITION"}
 </style>
 </head>
 <body class="menu">
@@ -874,6 +882,7 @@ button.danger:hover{background:var(--bad);color:#111}
   <svg class="cv-grain"><filter id="cvGrain"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#cvGrain)"/></svg>
   </div>
   <div class="live"><span class="dot"></span>LIVE · REPUBLIK SENDARU</div>
+  <div id="langSw" role="group" aria-label="Bahasa / Language"><button type="button" data-lang="id">ID</button><button type="button" data-lang="en">EN</button></div>
   <div class="menu-body">
     <p class="kicker">Gim mengetik tentang keberanian bersuara</p>
     <h1 class="logo"><span>Suara</span><span>Terakhir</span></h1>
@@ -943,8 +952,17 @@ button.danger:hover{background:var(--bad);color:#111}
   </div>
 </div>
 
+<script>
+// Language: Indonesian by default, English when picked on the title screen (stored in localStorage).
+// _t(id, en) picks the visible text; the story file (cerita.js or cerita.en.js) follows the same choice.
+let LANG = "id";
+try { if (localStorage.getItem("st_lang") === "en") LANG = "en"; } catch (e) {}
+const _t = (id, en) => LANG === "en" ? en : id;
+document.documentElement.lang = LANG;
+if (LANG === "en") document.title = "Suara Terakhir · The Last Voice";
+</script>
 <script src="adegan.js"></script>
-<script src="cerita.js"></script>
+<script>document.write(`<script src="${_t("cerita.js", "cerita.en.js")}"><\/script>`);</script>
 <script>
 // =====================================================================
 // AUDIO
@@ -1240,7 +1258,7 @@ const blipFor = (folder, who = "") => {
 // Plays the player's voice file if present. Resolves to its duration in seconds (or null when the file is missing).
 const VO_VOL = { pemain_l:.6, pemain_p:.6 };
 async function voice(folder, id){
-  if (!A.ctx) return null;
+  if (!A.ctx || LANG === "en") return null; // the recorded lines are Indonesian
   let url = null;
   for (const ext of ["mp3", "m4a"]){
     const u = `audio/vo/${folder}/${id}.${ext}`;
@@ -1336,7 +1354,7 @@ function buildFlood(){
   const houses = [
     [3, 130, 92, W(18, 24) + W(58, 24, 1)],
     [21, 150, 124, W(16, 20) + W(62, 20) + W(16, 56, 1)],
-    [44, 168, 112, W(14, 12) + W(64, 12, 1) + `<span class="fl-banner">Waspada banjir</span><span class="fl-door"></span>` + W(64, 64)],
+    [44, 168, 112, W(14, 12) + W(64, 12, 1) + `<span class="fl-banner">${_t("Waspada banjir", "Flood alert")}</span><span class="fl-door"></span>` + W(64, 64)],
     [70, 150, 126, W(18, 22, 1) + W(62, 22)],
     [88, 120, 96, W(22, 26)]
   ];
@@ -1521,7 +1539,7 @@ function card({parts, after = "", btn, vo, voFrom = 0, mark = "", alt = ""}){
     c.innerHTML = `<div class="chap">${mark !== "" ? `<div class="chap-mark" aria-hidden="true">${mark}</div>` : ""}</div>`;
     const box = c.firstChild;
     const nodes = parts.map(p => { const n = document.createElement(p.tag); if (p.cls) n.className = p.cls; box.appendChild(n); return n; });
-    const skipHint = el(c, "skip", "", "<kbd>Enter</kbd> untuk mempercepat");
+    const skipHint = el(c, "skip", "", _t("<kbd>Enter</kbd> untuk mempercepat", "<kbd>Enter</kbd> to speed up"));
     S.typing = true; S.skip = false;
     for (let i = 0; i < parts.length; i++){
       const spoken = vo && i >= voFrom;
@@ -1566,14 +1584,14 @@ $("card").addEventListener("submit", async e => {
   e.preventDefault();
   const f = e.target, ta = f.querySelector("textarea"), st = f.querySelector(".saran-status"), btn = f.querySelector("button");
   const pesan = ta.value.trim();
-  if (!pesan){ st.textContent = "Tulis dulu saran atau kritikmu."; ta.focus(); return; }
-  btn.disabled = true; st.textContent = "Mengirim";
+  if (!pesan){ st.textContent = _t("Tulis dulu saran atau kritikmu.", "Write your feedback first."); ta.focus(); return; }
+  btn.disabled = true; st.textContent = _t("Mengirim", "Sending");
   try {
     const r = await fetch(SARAN_URL, {method:"POST", headers:{"Content-Type":"application/json"},
       body:JSON.stringify({pesan, nama:S.name, akhir:f.dataset.akhir, mode:S.mode, kepercayaan:S.trust})});
     if (!r.ok) throw new Error(r.status);
-    f.classList.add("sent"); ta.disabled = true; st.textContent = "Terkirim. Terima kasih sudah bersuara.";
-  } catch (err){ btn.disabled = false; st.textContent = "Gagal terkirim. Periksa koneksi, lalu coba lagi."; }
+    f.classList.add("sent"); ta.disabled = true; st.textContent = _t("Terkirim. Terima kasih sudah bersuara.", "Sent. Thanks for speaking up.");
+  } catch (err){ btn.disabled = false; st.textContent = _t("Gagal terkirim. Periksa koneksi, lalu coba lagi.", "Could not send. Check your connection and try again."); }
 });
 
 // ---------- leaderboard (Base44 entity Skor) ----------
@@ -1583,10 +1601,12 @@ $("card").addEventListener("submit", async e => {
 const SKOR_URL = SARAN_URL.replace(/Saran$/, "Skor");
 const LB_BONUS = { "Kursi Kedua":400, "Fajar Sendaru":350, "Martir":250, "Janji Kosong":150, "Ban Serep":100, "Kursi Empuk":50, "Suara yang Tenggelam":0 };
 const LB_MODE = { santai:.8, normal:1, sulit:1.3 };
-const LB_MODE_NAME = { santai:"Santai", normal:"Normal", sulit:"Sulit" };
+const LB_MODE_NAME = { santai:_t("Santai", "Relaxed"), normal:"Normal", sulit:_t("Sulit", "Hard") };
+// endings are stored under their Indonesian titles; English players see these names on the board
+const AKHIR_EN = { "Kursi Kedua":"The Second Seat", "Fajar Sendaru":"Sendaru Dawn", "Martir":"Martyr", "Janji Kosong":"Empty Promises", "Ban Serep":"The Spare Tire", "Kursi Empuk":"The Soft Seat", "Suara yang Tenggelam":"The Drowned Voice" };
 // trust carries most of the score, then the ending, then typing accuracy; harder modes multiply it
 const scoreOf = r => Math.round((r.kepercayaan * 10 + LB_BONUS[r.akhir] + r.akurasi * 3) * LB_MODE[r.mode]);
-const LB_KASAR = /anjing|anjg|babi|bangsat|bajingan|kontol|memek|ngentot|entot|jancok|jancuk|goblok|tolol|pepek|kampret|asu\b|tai\b|peler|fuck|shit|bitch/i;
+const LB_KASAR = /anjing|anjg|babi|bangsat|bajingan|kontol|memek|ngentot|entot|jancok|jancuk|goblok|tolol|pepek|kampret|asu\b|tai\b|peler|fuck|shit|bitch|cunt|whore|slut|asshole|nigg|faggot|retard/i;
 const escS = s => String(s).replace(/[<>&"']/g, c => ({"<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;", "'":"&#39;"}[c]));
 const finishedAll = () => [1, 2, 3, 4, 5, 6, 7, 8].every(n => S.done.has(n));
 let lbMine = null; // this run's row, highlighted on the board
@@ -1596,11 +1616,11 @@ function submitScore(akhir){
   const { wpm, acc } = typingNums(ALL);
   const row = { nama:S.name, kpm:Math.min(200, wpm), akurasi:acc, kepercayaan:S.trust, akhir, mode:S.mode };
   row.skor = scoreOf(row);
-  if (LB_KASAR.test(S.name)) return { row, sent:Promise.resolve("Nama ini tidak bisa masuk papan skor.") };
+  if (LB_KASAR.test(S.name)) return { row, sent:Promise.resolve(_t("Nama ini tidak bisa masuk papan skor.", "This name can't go on the leaderboard.")) };
   lbMine = row; lbCache = {};
   // keepalive: "Main Lagi" reloads the page and must not cancel the request
   const sent = fetch(SKOR_URL, {method:"POST", keepalive:true, headers:{"Content-Type":"application/json"}, body:JSON.stringify(row)})
-    .then(r => r.ok ? "Tercatat di papan skor." : "Gagal mencatat skor.").catch(() => "Gagal mencatat skor. Periksa koneksi.");
+    .then(r => r.ok ? _t("Tercatat di papan skor.", "Saved to the leaderboard.") : _t("Gagal mencatat skor.", "Could not save the score.")).catch(() => _t("Gagal mencatat skor. Periksa koneksi.", "Could not save the score. Check your connection."));
   return { row, sent };
 }
 function validRow(r){
@@ -1626,19 +1646,19 @@ async function showBoard(tab = lbTab){
   document.querySelectorAll(".lb-tabs button").forEach(b => { const on = b.dataset.tab === tab; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; });
   const list = $("lbList");
   list.setAttribute("aria-labelledby", tab === "skor" ? "lbTabSkor" : "lbTabKpm");
-  list.innerHTML = `<p class="lb-empty">Memuat papan skor</p>`;
+  list.innerHTML = `<p class="lb-empty">${_t("Memuat papan skor", "Loading the leaderboard")}</p>`;
   try {
     const rows = await loadBoard(tab);
     if (lbTab !== tab) return;
-    if (!rows.length){ list.innerHTML = `<p class="lb-empty">Belum ada yang menamatkan seluruh bab. Jadilah yang pertama.</p>`; return; }
-    const date = s => new Date(s).toLocaleDateString("id-ID", {day:"numeric", month:"short"});
+    if (!rows.length){ list.innerHTML = `<p class="lb-empty">${_t("Belum ada yang menamatkan seluruh bab. Jadilah yang pertama.", "Nobody has finished every chapter yet. Be the first.")}</p>`; return; }
+    const date = s => new Date(s).toLocaleDateString(_t("id-ID", "en-GB"), {day:"numeric", month:"short"});
     list.innerHTML = `<ol>${rows.map((r, i) => {
       const me = lbMine && r.nama === lbMine.nama && r[tab] === lbMine[tab];
-      const val = tab === "skor" ? `${r.skor}<small>skor</small>` : `${r.kpm}<small>kata/menit</small>`;
+      const val = tab === "skor" ? `${r.skor}<small>${_t("skor", "score")}</small>` : `${r.kpm}<small>${_t("kata/menit", "wpm")}</small>`;
       return `<li${me ? ' class="me"' : ""}><span class="rk">${i + 1}</span><div class="nm"><b>${escS(r.nama)}</b>
-        <span>${LB_MODE_NAME[r.mode]} · ${escS(r.akhir)} · akurasi ${r.akurasi}%${r.created_date ? " · " + date(r.created_date) : ""}</span></div><span class="vl">${val}</span></li>`;
+        <span>${LB_MODE_NAME[r.mode]} · ${escS(LANG === "en" && AKHIR_EN[r.akhir] || r.akhir)} · ${_t("akurasi", "accuracy")} ${r.akurasi}%${r.created_date ? " · " + date(r.created_date) : ""}</span></div><span class="vl">${val}</span></li>`;
     }).join("")}</ol>`;
-  } catch (e){ if (lbTab === tab) list.innerHTML = `<p class="lb-empty">Papan skor gagal dimuat. Periksa koneksi, lalu coba lagi.</p>`; }
+  } catch (e){ if (lbTab === tab) list.innerHTML = `<p class="lb-empty">${_t("Papan skor gagal dimuat. Periksa koneksi, lalu coba lagi.", "The leaderboard could not load. Check your connection and try again.")}</p>`; }
 }
 let lbBack = null;
 // capture phase: while the board is open no key reaches the game (Enter would start or restart it)
@@ -1835,8 +1855,8 @@ function statsHTML(src = ST, title = ""){
   for (let e = 0; e <= eMax; e++) g += `<text x="${W - R + 12}" y="${ye(e) + 5}" fill="#6b7080" font-size="15">${e}</text>`;
   const step = Math.max(1, Math.ceil(n / 30));
   for (let i = 0; i < n; i += step) g += `<text x="${x(i)}" y="${H - 12}" text-anchor="middle" fill="#6b7080" font-size="15">${i + 1}</text>`;
-  g += `<text transform="translate(16 ${(H - Bm) / 2}) rotate(-90)" text-anchor="middle" fill="#6b7080" font-size="14">Kata per Menit</text>`;
-  g += `<text transform="translate(${W - 8} ${(H - Bm) / 2}) rotate(90)" text-anchor="middle" fill="#6b7080" font-size="14">Salah</text>`;
+  g += `<text transform="translate(16 ${(H - Bm) / 2}) rotate(-90)" text-anchor="middle" fill="#6b7080" font-size="14">${_t("Kata per Menit", "Words per Minute")}</text>`;
+  g += `<text transform="translate(${W - 8} ${(H - Bm) / 2}) rotate(90)" text-anchor="middle" fill="#6b7080" font-size="14">${_t("Salah", "Errors")}</text>`;
   const rawP = rawS.map((v, i) => [x(i), y(v)]), wpmP = wpmS.map((v, i) => [x(i), y(v)]);
   g += `<path d="${smooth(rawP)}" fill="none" stroke="#6b7080" stroke-width="3"/>`;
   g += rawP.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="3.5" fill="#6b7080"/>`).join("");
@@ -1846,13 +1866,13 @@ function statsHTML(src = ST, title = ""){
   const typos = src.keys - src.keysOk;
   return `<div class="stats">${title ? `<p class="stats-title">${title}</p>` : ""}
     <div class="bottom">
-      <div><div class="lbl">kecepatan</div><div class="val">${wpm} <small style="font-size:.5em">kpm</small></div></div>
-      <div><div class="lbl">akurasi</div><div class="val">${acc}%</div></div>
-      <div><div class="lbl">waktu mengetik</div><div class="val">${Math.round(secs)} dtk</div></div>
-      <div><div class="lbl">salah ketik</div><div class="val">${typos}</div></div>
+      <div><div class="lbl">${_t("kecepatan", "speed")}</div><div class="val">${wpm} <small style="font-size:.5em">${_t("kpm", "wpm")}</small></div></div>
+      <div><div class="lbl">${_t("akurasi", "accuracy")}</div><div class="val">${acc}%</div></div>
+      <div><div class="lbl">${_t("waktu mengetik", "typing time")}</div><div class="val">${Math.round(secs)} ${_t("dtk", "s")}</div></div>
+      <div><div class="lbl">${_t("salah ketik", "typos")}</div><div class="val">${typos}</div></div>
     </div>
-    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik kecepatan mengetik per detik">${g}</svg>
-    <p class="note">Kuning: kecepatan rata-rata. Abu-abu: kecepatan per detik. ×: huruf salah.</p>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${_t("Grafik kecepatan mengetik per detik", "Typing speed per second chart")}">${g}</svg>
+    <p class="note">${_t("Kuning: kecepatan rata-rata. Abu-abu: kecepatan per detik. ×: huruf salah.", "Yellow: average speed. Gray: speed per second. ×: wrong letter.")}</p>
   </div>`;
 }
 
@@ -1860,7 +1880,7 @@ function ask(targets, {prompt, hintText, timeLimit, exact, tags = []}){
   return new Promise(resolve => {
     S.targets = targets; S.tags = tags; S.typed = ""; typer.value = ""; S.exact = !!exact;
     $("prompt").textContent = prompt || "";
-    hint(hintText || "Ketik salah satu jawaban, lalu tekan Enter.");
+    hint(hintText || _t("Ketik salah satu jawaban, lalu tekan Enter.", "Type one of the answers, then press Enter."));
     S.start = performance.now();
     const ob = $("opts"); ob.classList.add("enter"); setTimeout(() => ob.classList.remove("enter"), 450);
     render(); recStart();
@@ -1927,10 +1947,10 @@ typer.addEventListener("keydown", e => {
   e.stopPropagation();
   const idx = bestTarget(), target = S.targets[idx];
   if (S.exact){
-    if (S.typed !== target){ hint("Masih ada yang salah. Perhatikan huruf kapital dan tanda baca.", true); return; }
+    if (S.typed !== target){ hint(_t("Masih ada yang salah. Perhatikan huruf kapital dan tanda baca.", "Something is still wrong. Check the capital letters and punctuation."), true); return; }
   } else {
-    if (S.typed[0] !== target[0]){ hint("Awali kalimat dengan huruf kapital.", true); return; }
-    if (S.typed.length < target.length * .9){ hint("Kalimatnya belum selesai.", true); return; }
+    if (S.typed[0] !== target[0]){ hint(_t("Awali kalimat dengan huruf kapital.", "Start the sentence with a capital letter."), true); return; }
+    if (S.typed.length < target.length * .9){ hint(_t("Kalimatnya belum selesai.", "The sentence isn't finished yet."), true); return; }
   }
   S.onSubmit(idx);
 });
@@ -1938,7 +1958,10 @@ typer.addEventListener("keydown", e => {
 // =====================================================================
 // FORUM ENGINE (shared by every chapter; story content lives in cerita.js)
 // =====================================================================
-function sapa(){ return S.sapa === "L" ? {pendek:"Pak", panjang:"Bapak"} : {pendek:"Bu", panjang:"Ibu"}; }
+function sapa(){
+  if (LANG === "en") return S.sapa === "L" ? {pendek:"sir", panjang:"sir"} : {pendek:"ma'am", panjang:"ma'am"};
+  return S.sapa === "L" ? {pendek:"Pak", panjang:"Bapak"} : {pendek:"Bu", panjang:"Ibu"};
+}
 function playerFolder(){ return S.sapa === "L" ? "pemain_l" : "pemain_p"; }
 // Story text placeholders: {P} = Bapak/Ibu, {p} = Pak/Bu, {N} = player's first name.
 function fill(s){
@@ -1992,7 +2015,7 @@ async function question(item, F){
     delta = to.d ?? -8;
     if (to.who) await say(to.who, fill(to.text), to.node ? $(to.node) : null, {vo:to.vo, folder:to.folder});
     else await say(S.name, "...", hero);
-    line = fill(to.line || "{N} terdiam terlalu lama. Kamera terus merekam keheningan itu.");
+    line = fill(to.line || _t("{N} terdiam terlalu lama. Kamera terus merekam keheningan itu.", "{N} stays silent too long. The camera keeps recording the silence."));
   } else {
     o = list[order[r.idx]];
     delta = o.d || 0; de = o.e || 0;
@@ -2013,8 +2036,8 @@ async function question(item, F){
       await wait(700);
     }
     line = fill(o.r);
-    if (twisted) line += " Salah ketikmu dipotong dan disebarkan sebagai judul berita.";
-    else if (sloppy) line += " (Kalimatmu kurang rapi sehingga terdengar kurang meyakinkan.)";
+    if (twisted) line += _t(" Salah ketikmu dipotong dan disebarkan sebagai judul berita.", " Your typo gets clipped and spread as a headline.");
+    else if (sloppy) line += _t(" (Kalimatmu kurang rapi sehingga terdengar kurang meyakinkan.)", " (Your sentence was messy, so it sounded less convincing.)");
   }
   // trust is harder to earn the higher it already is (losses stay full)
   if (delta > 0) delta = Math.max(1, Math.round(delta * (100 - S.trust) / 90));
@@ -2022,10 +2045,10 @@ async function question(item, F){
   if (de){ setElite(S.elite + de); if (!$("eliteBox").classList.contains("hidden")) floatDelta("eliteNum", de, true); }
   setPromises();
   let html = `<div class="result">${line}`;
-  if (twisted) html += `<div class="twist"><span>Plintiran media</span>"${htmlEsc(twisted)}"</div>`;
-  html += `<div class="deltas"><span class="${delta >= 0 ? "delta-up" : "delta-down"}">Kepercayaan ${delta >= 0 ? "+" : ""}${delta}</span>`;
-  if (de && !$("eliteBox").classList.contains("hidden")) html += `<span class="delta-elite">Tekanan Elit ${de > 0 ? "+" : ""}${de}</span>`;
-  if (newPromise && !$("promBox").classList.contains("hidden")) html += `<span class="delta-prom">Janji baru dicatat</span>`;
+  if (twisted) html += `<div class="twist"><span>${_t("Plintiran media", "Media spin")}</span>"${htmlEsc(twisted)}"</div>`;
+  html += `<div class="deltas"><span class="${delta >= 0 ? "delta-up" : "delta-down"}">${_t("Kepercayaan", "Trust")} ${delta >= 0 ? "+" : ""}${delta}</span>`;
+  if (de && !$("eliteBox").classList.contains("hidden")) html += `<span class="delta-elite">${_t("Tekanan Elit", "Elite Pressure")} ${de > 0 ? "+" : ""}${de}</span>`;
+  if (newPromise && !$("promBox").classList.contains("hidden")) html += `<span class="delta-prom">${_t("Janji baru dicatat", "New promise recorded")}</span>`;
   html += `</div></div>`;
   $("opts").innerHTML = html;
   await wait(2800);
@@ -2042,7 +2065,7 @@ async function speech(lines, heroId, prompt){
   let chars = 0, secs = 0;
   S.tourNext = () => tour("sumpah", TOUR_STEPS.sumpah);
   for (const line of lines){
-    const r = await ask([line.t], { prompt, hintText:"Ketik kalimat di atas dengan tepat, lalu tekan Enter.", exact:true });
+    const r = await ask([line.t], { prompt, hintText:_t("Ketik kalimat di atas dengan tepat, lalu tekan Enter.", "Type the sentence above exactly, then press Enter."), exact:true });
     chars += line.t.length; secs += r.secs;
     $("opts").innerHTML = ""; $("prompt").textContent = ""; hint("");
     await say(S.name, line.t, $(heroId), {vo:line.vo, folder:playerFolder()});
@@ -2069,7 +2092,7 @@ function feedNoise(pool, on){
 
 // ---- chapter frame ----
 function chapterStart(n, title, scene, extra, track){
-  $("chap").innerHTML = `<b>${n ? "Bab " + n : "Prolog"}</b>${title}`;
+  $("chap").innerHTML = `<b>${n ? _t("Bab ", "Chapter ") + n : _t("Prolog", "Prologue")}</b>${title}`;
   $("bubble").classList.remove("show");
   $("world").classList.remove("zoom");
   $("feedList").innerHTML = "";
@@ -2083,14 +2106,14 @@ function chapterStart(n, title, scene, extra, track){
   if (n >= 3) unlock("promBox");
 }
 function metersHTML(){
-  let h = `<div class="meters-end"><div class="mtr">Kepercayaan<span class="meter"><i style="width:${S.trust}%"></i></span><b>${S.trust}</b></div>`;
-  if (!$("eliteBox").classList.contains("hidden")) h += `<div class="mtr">Tekanan Elit<span class="meter elite"><i style="width:${S.elite}%"></i></span><b>${S.elite}</b></div>`;
-  if (!$("promBox").classList.contains("hidden")) h += `<div class="mtr">Janji Tertunda<b>${S.promises.length}</b></div>`;
+  let h = `<div class="meters-end"><div class="mtr">${_t("Kepercayaan", "Trust")}<span class="meter"><i style="width:${S.trust}%"></i></span><b>${S.trust}</b></div>`;
+  if (!$("eliteBox").classList.contains("hidden")) h += `<div class="mtr">${_t("Tekanan Elit", "Elite Pressure")}<span class="meter elite"><i style="width:${S.elite}%"></i></span><b>${S.elite}</b></div>`;
+  if (!$("promBox").classList.contains("hidden")) h += `<div class="mtr">${_t("Janji Tertunda", "Pending Promises")}<b>${S.promises.length}</b></div>`;
   return h + `</div>`;
 }
 function ledgerHTML(){
-  const items = [...S.ev].map(k => `<li><span class="t ev">Bukti</span>${EVIDENCE[k].text}</li>`)
-    .concat(S.promises.map(id => `<li><span class="t pr">Janji</span>${cap(PROMISES[id])}. Rakyat akan menagihnya.</li>`));
+  const items = [...S.ev].map(k => `<li><span class="t ev">${_t("Bukti", "Evidence")}</span>${EVIDENCE[k].text}</li>`)
+    .concat(S.promises.map(id => `<li><span class="t pr">${_t("Janji", "Promise")}</span>${_t(cap(PROMISES[id]) + ". Rakyat akan menagihnya.", "You promised to " + PROMISES[id] + ". The people will collect.")}</li>`));
   return items.length ? `<ul class="ledger">${items.join("")}</ul>` : "";
 }
 // Chapter-end newspaper card. ends: {tinggi, sedang, rendah} -> [headline, sub]; the vo id is bab<n>_akhir_<key>.
@@ -2103,10 +2126,10 @@ async function chapterEnd(n, ends, next, forceKey){
   const key = forceKey || (S.trust >= 75 ? "tinggi" : S.trust >= 45 ? "sedang" : "rendah");
   const [headline, sub] = ends[key];
   music(S.trust >= 45 ? "akhir_baik" : "akhir_buruk");
-  const parts = [{tag:"h2", text:`Bab ${n} Selesai`}, {tag:"div", cls:"headline", text:headline}, {tag:"p", cls:"story", text:sub}];
-  if (next) parts.push({tag:"p", cls:"next", text:`Bersambung ke Bab ${n + 1}: ${next}.`});
-  await card({ vo:`bab${n}_akhir_${key}`, mark:n, btn: next ? `Lanjut ke Bab ${n + 1}` : "Lanjut", parts,
-    after: metersHTML() + ledgerHTML() + statsHTML(ST, `Statistik mengetik Bab ${n}`) });
+  const parts = [{tag:"h2", text:_t(`Bab ${n} Selesai`, `Chapter ${n} Complete`)}, {tag:"div", cls:"headline", text:headline}, {tag:"p", cls:"story", text:sub}];
+  if (next) parts.push({tag:"p", cls:"next", text:_t(`Bersambung ke Bab ${n + 1}: ${next}.`, `Continued in Chapter ${n + 1}: ${next}.`)});
+  await card({ vo:`bab${n}_akhir_${key}`, mark:n, btn: next ? _t(`Lanjut ke Bab ${n + 1}`, `Go to Chapter ${n + 1}`) : _t("Lanjut", "Continue"), parts,
+    after: metersHTML() + ledgerHTML() + statsHTML(ST, _t(`Statistik mengetik Bab ${n}`, `Typing stats, Chapter ${n}`)) });
   statsReset();
 }
 
@@ -2141,7 +2164,7 @@ function tour(id, steps){
     const box = el(document.body, "", "", `<div class="t-blur"></div><div class="t-hole"></div>
       <div class="t-tip" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourText">
         <div class="t-step"></div><h3 id="tourTitle"></h3><p id="tourText"></p>
-        <div class="t-row"><button type="button" class="t-skip">Lewati tutorial</button><button type="button" class="t-next"></button></div></div>`);
+        <div class="t-row"><button type="button" class="t-skip">${_t("Lewati tutorial", "Skip tutorial")}</button><button type="button" class="t-next"></button></div></div>`);
     box.id = "tour";
     const hole = box.querySelector(".t-hole"), tip = box.querySelector(".t-tip"), blur = box.querySelector(".t-blur"), next = box.querySelector(".t-next");
     const had = document.activeElement; typer.blur();
@@ -2169,10 +2192,10 @@ function tour(id, steps){
     }
     function show(){
       const st = steps[i];
-      box.querySelector(".t-step").textContent = steps.length > 1 ? `Langkah ${i + 1} dari ${steps.length}` : "Tutorial";
+      box.querySelector(".t-step").textContent = steps.length > 1 ? _t(`Langkah ${i + 1} dari ${steps.length}`, `Step ${i + 1} of ${steps.length}`) : "Tutorial";
       box.querySelector("#tourTitle").textContent = st.title;
       box.querySelector("#tourText").innerHTML = st.text;
-      next.innerHTML = (i === steps.length - 1 ? (st.last || "Mengerti") : "Lanjut") + " <kbd>Enter</kbd>";
+      next.innerHTML = (i === steps.length - 1 ? (st.last || _t("Mengerti", "Got it")) : _t("Lanjut", "Next")) + " <kbd>Enter</kbd>";
       place(); next.focus({preventScroll:true});
       // restart the pop-up animation for this step
       for (const e of [tip, hole]){ e.classList.remove("pop"); void e.offsetWidth; e.classList.add("pop"); }
@@ -2225,9 +2248,80 @@ const TOUR_STEPS = {
   ]
 };
 
+// English tour text, step for step (the element pickers above stay the same)
+if (LANG === "en") Object.entries({
+  intro: [
+    ["Welcome to Suara Terakhir", "This is a story game you play by <b>typing</b>. You are the youngest member of the house in the Republic of Sendaru. Floods, missing aid, smears, and an impeachment hearing are waiting for you."],
+    ["Your words decide the story", "You type every answer yourself. Your choices change <b>public trust</b>, and that decides your ending."],
+    ["Pick a difficulty", "<b>Relaxed</b> has no time limit, <b>Normal</b> suits most players, <b>Hard</b> is for tricky answers. You can also press 1, 2, or 3."],
+    ["Start here", "When you're ready, press <b>Start Playing</b> or Enter.", "Ready"]
+  ],
+  kartu: [
+    ["Fill in your ID card", "Type your full name with a <b>capital letter</b> at the start of each word, then choose Sir or Ma'am. That's how the other characters will address you."],
+    ["Signature", "Scribble whatever you like with a mouse or finger. It's optional."],
+    ["The Prologue is the tutorial", "If this is your first time, <b>leave it unchecked</b>. The Prologue measures your typing speed so the time limits are fair."],
+    ["Continue", "Press <b>Continue</b> or Enter to walk into the house.", "Got it"]
+  ],
+  sumpah: [
+    ["Type this sentence", "Type this oath <b>exactly</b>, capital letters and punctuation included. Correct letters change color, wrong ones get marked."],
+    ["Open the keyboard", "On a phone, tap this button if the keyboard hasn't appeared."],
+    ["Hints", "This line tells you when something is still wrong. Press <b>Enter</b> once the sentence is done.", "Start typing"]
+  ],
+  forum: [
+    ["Someone's asking", "Read the question first, and notice who's asking."],
+    ["Choose by typing", "These are <b>three possible answers</b>. No clicking needed: just start typing one of them, then press <b>Enter</b>. The answer you're typing gets locked in."],
+    ["Time limit", "This bar gets shorter. If it runs out before you answer, you're counted as silent and trust drops."],
+    ["Public trust", "Honest answers raise it, evasive ones lower it. The higher it is, the harder it climbs. Too many typos also weaken your answer."],
+    ["Good luck out there", "That's it. No answer is safe for everyone. Pick the one you think is right.", "Start answering"]
+  ]
+}).forEach(([k, steps]) => steps.forEach(([title, text, last], i) => Object.assign(TOUR_STEPS[k][i], {title, text}, last ? {last} : {})));
+
 // =====================================================================
 // START
 // =====================================================================
+// ---------- English UI for the static markup (the story itself comes from cerita.en.js) ----------
+if (LANG === "en"){
+  const set = (sel, html, attr) => document.querySelectorAll(sel).forEach(e => attr ? e.setAttribute(attr, html) : e.innerHTML = html);
+  [
+    ["#hud > .hx:not(#eliteBox):not(#promBox) .long", "Public trust"], ["#hud > .hx:not(#eliteBox):not(#promBox) .short", "Trust"],
+    ["#eliteBox .long", "Elite pressure"], ["#eliteBox .short", "Elite"],
+    ["#promBox .long", "Pending promises"], ["#promBox .short", "Promises"],
+    ["#muteBtn", "Mute", "aria-label"], ["#muteBtn", "Sound", "title"],
+    ["#resetBtn", "Start over", "aria-label"], ["#resetBtn", "Start over", "title"],
+    ["#feed", "Comment section", "aria-label"], ["#feed .feed-head", '<span class="dot"></span>Comments'],
+    ["#kbdBtn", "Tap to type"], ["#typer", "Type your answer", "aria-label"],
+    ["#title .live", '<span class="dot"></span>LIVE · REPUBLIC OF SENDARU'],
+    ["#title .kicker", "The Last Voice · a typing game about the courage to speak up"],
+    ["#title .tagline", "One honest voice against the whole building. Every word you type will be spoken, recorded, and held against you."],
+    [".ballot-head", "<span>Ballot</span><span>Choose one difficulty</span>"],
+    ["#title .modes", "Difficulty", "aria-label"],
+    [".mode:nth-child(1) b", "Relaxed"], [".mode:nth-child(1) small", "No time limit. Enjoy the story."],
+    [".mode:nth-child(2) small", "Three answers, generous timing."],
+    [".mode:nth-child(3) b", "Hard"], [".mode:nth-child(3) small", "Tricky answers, tighter timing."],
+    ["#startBtn", "Start Playing <kbd>Enter</kbd>"], ["#boardBtn", "Leaderboard"],
+    ["#title .credit", "Prologue, 8 chapters, and one hidden chapter · Music: Kevin MacLeod (incompetech.com), licensed under CC BY 4.0"],
+    ["#title .ticker .tag", "BREAKING NEWS"],
+    ["#nameCard .id-head small", "Republic of Sendaru"], ["#idTitle", "House Member ID Card"],
+    ["label[for=nameInput]", "Full name"], ["#nameInput", "Type your name", "placeholder"],
+    ["#sapaLbl", "Address me as"],
+    ["#nameCard .seg label:nth-child(1) span", "Sir"], ["#nameCard .seg label:nth-child(2) span", "Ma'am"],
+    ["#signLbl", "Signature"], ["#signClear", "Clear"], ["#signHint", "Draw with a mouse, trackpad, or finger"],
+    ["#nameHelp", "Start every word of your name with a capital letter."], ["#nameBtn", "Continue <kbd>Enter</kbd>"],
+    [".lb-head small", "Republic of Sendaru · House Notice"], ["#lbTitle", "Leaderboard"],
+    [".lb-head p", "Only members who finished every chapter. One row per name, their best result."],
+    ["#lbClose", "Close leaderboard", "aria-label"], [".lb-tabs", "Ranking type", "aria-label"],
+    ["#lbTabSkor", "Final Score"], ["#lbTabKpm", "Fastest"],
+    ["#confirmTitle", "Start over?"], ["#confirmText", "Your current progress will be lost."],
+    ["#confirmNo", "Cancel"], ["#confirmYes", "Yes, start over"]
+  ].forEach(([sel, html, attr]) => set(sel, html, attr));
+  document.querySelector("#nameCard .chk").lastChild.textContent = " Skip tutorial (Prologue)";
+}
+// language switch on the title screen: remembered, then the page reloads with the other story file
+document.querySelectorAll("#langSw button").forEach(b => {
+  b.setAttribute("aria-pressed", String(b.dataset.lang === LANG));
+  b.onclick = () => { if (b.dataset.lang === LANG) return; try { localStorage.setItem("st_lang", b.dataset.lang); } catch (e) {} location.reload(); };
+});
+
 buildHall(); buildFlood(); buildStages();
 $("muteBtn").onclick = () => {
   A.on = !A.on;
@@ -2235,15 +2329,26 @@ $("muteBtn").onclick = () => {
   const b = $("muteBtn");
   b.classList.toggle("muted", !A.on);
   b.setAttribute("aria-pressed", String(!A.on));
-  b.setAttribute("aria-label", A.on ? "Matikan suara" : "Nyalakan suara");
+  b.setAttribute("aria-label", A.on ? _t("Matikan suara", "Mute") : _t("Nyalakan suara", "Unmute"));
 };
-const MODE_DESC = {
+const MODE_DESC = LANG === "en" ? {
+  santai: "Relaxed: no time limit. Good for enjoying the story.",
+  normal: "Normal: three answers with a generous time limit.",
+  sulit: "Hard: every answer sounds reasonable, the differences are small, and time is tighter."
+} : {
   santai: "Santai: tanpa batas waktu. Cocok untuk menikmati cerita.",
   normal: "Normal: tiga pilihan jawaban dengan batas waktu yang longgar.",
   sulit: "Sulit: semua jawaban terdengar masuk akal, bedanya tipis, dan waktunya lebih ketat."
 };
 // fictional headlines for the title-screen ticker (rendered twice for a seamless loop)
-const HEADLINES = [
+const HEADLINES = LANG === "en" ? [
+  "Flood swamps three districts, levee funds questioned",
+  "Haze closes 40 schools in West Sendaru",
+  "Rice prices rise for the third time this month",
+  "Coordinating Minister: \u201cEverything is under control\u201d",
+  "Social aid still hasn't reached affected residents",
+  "Youngest house member sworn in today"
+] : [
   "Banjir merendam tiga kecamatan, dana tanggul dipertanyakan",
   "Kabut asap meliburkan 40 sekolah di Sendaru Barat",
   "Harga beras naik untuk ketiga kalinya bulan ini",
@@ -2851,8 +2956,8 @@ $("startBtn").onclick = () => {
 const NAME_RE = /^\p{Lu}[\p{L}'.-]*( \p{Lu}[\p{L}'.-]*)*$/u;
 async function submitName(){
   const v = $("nameInput").value.trim().replace(/\s+/g, " ");
-  if (v.length < 2){ $("nameErr").textContent = "Nama minimal dua huruf."; return; }
-  if (!NAME_RE.test(v)){ $("nameErr").textContent = "Awali setiap kata dengan huruf kapital, misalnya: Sari Wulandari."; return; }
+  if (v.length < 2){ $("nameErr").textContent = _t("Nama minimal dua huruf.", "Your name needs at least two letters."); return; }
+  if (!NAME_RE.test(v)){ $("nameErr").textContent = _t("Awali setiap kata dengan huruf kapital, misalnya: Sari Wulandari.", "Start every word with a capital letter, for example: Sari Wulandari."); return; }
   S.name = v; S.first = v.split(" ")[0];
   S.sapa = document.querySelector("input[name=sapa]:checked").value;
   $("nameCard").classList.add("hidden");
@@ -2873,7 +2978,7 @@ async function play(n){
 // continue from the saved chapter
 const saved = loadGame();
 if (saved){
-  $("contBtn").innerHTML = `Lanjutkan Bab ${saved.n}`;
+  $("contBtn").innerHTML = _t(`Lanjutkan Bab ${saved.n}`, `Continue Chapter ${saved.n}`);
   $("contBtn").classList.remove("hidden");
 }
 $("contBtn").onclick = async () => {

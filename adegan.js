@@ -24,7 +24,7 @@ function buildPosko(){
     el(st, "abs ps-tent", `left:${x}%;--w:${w}px;--h:${h}px;--tc:${c};${zs(-260)}`));
   el(st, "abs ps-pole", `left:91%;${zs(-250)}`);
   el(st, "abs ps-terpal", zs(-200));
-  el(st, "abs ps-banner", zs(-198), "Posko Pengungsian <b>Muara Hilir</b>");
+  el(st, "abs ps-banner", zs(-198), _t("Posko Pengungsian <b>Muara Hilir</b>", "Evacuation Shelter <b>Muara Hilir</b>"));
   el(st, "abs ps-bulbs", zs(-196), [4, 16, 28, 40, 52, 64, 76, 88].map((x, i) => `<i style="left:${x}%;top:${8 + Math.sin(i / 7 * Math.PI) * 14}px"></i>`).join("")
     + `<svg viewBox="0 0 100 30" preserveAspectRatio="none" width="100%" height="100%" style="position:absolute;inset:0"><path d="M0 4Q50 34 100 4" fill="none" stroke="#14121a" stroke-width=".6"/></svg>`);
   // layer 3: damp ground, the aid table with empty crates, the officer and a short queue of large figures
@@ -39,7 +39,7 @@ function buildPosko(){
   const q = [[46, "#6a3a4a", 1.25], [57, null, 1.3], [68, "#3a5a6a", 1.25]];
   q.forEach(([x, hj, s], i) => {
     const p = person(st, {x, y:10, z:-20, s, c:pick(SUITS), skin:pick(SKINS), hijab:hj});
-    if (i === 1) p.insertAdjacentHTML("beforeend", `<span class="ps-sign">Mana bantuannya?</span>`);
+    if (i === 1) p.insertAdjacentHTML("beforeend", `<span class="ps-sign">${_t("Mana bantuannya?", "Where's the aid?")}</span>`);
   });
   person(st, {x:76, y:10, z:-10, s:.8, c:"#6a4a3a", skin:pick(SKINS)}); // a child holding on to the queue
   el(st, "abs motes", `left:4%;bottom:6%;width:280px;height:70%;${zs(-88)}`, motes(12, 5, 70));
@@ -56,7 +56,7 @@ function buildPod(){
   el(st, "abs foam", zs(-240));
   el(st, "abs pod-jendela", `left:10%;top:14%;${zs(-236)}`);
   el(st, "abs pod-rak", `right:9%;top:22%;${zs(-230)}`);
-  el(st, "abs neon", "", "Ngobrol Jujur");
+  el(st, "abs neon", "", _t("Ngobrol Jujur", "Honest Talk"));
   el(st, "abs onair", `left:12%;top:16%;${zs(-200)}`, "ON AIR");
   el(st, "abs ring", `left:78%;top:20%;${zs(-160)}`);
   el(st, "abs monitor", `right:6%;bottom:42%;${zs(-120)}`, "<b>●</b> LIVE · 12,4K VIEWERS");
@@ -88,7 +88,7 @@ function buildAsap(){
   el(st, "abs burnt");
   // layer 2: a power pole, the official warning and a car's headlights in the smoke
   el(st, "abs posko-tiang", `left:62%;bottom:20%;height:150px;${zs(-180)}`);
-  el(st, "abs asap-spanduk", `left:31%;bottom:56%;${zs(-170)}`, "Kurangi aktivitas di luar rumah");
+  el(st, "abs asap-spanduk", `left:31%;bottom:56%;${zs(-170)}`, _t("Kurangi aktivitas di luar rumah", "Limit outdoor activity"));
   el(st, "abs asap-lampu", `left:56%;bottom:22%;${zs(-150)}`);
   for (let i = 0; i < 14; i++) el(st, "abs ember", `left:${Math.random() * 100}%;bottom:${3 + Math.random() * 16}%;animation-delay:-${Math.random() * 1.6}s;${zs(-40 + Math.random() * 100)}`);
   [[38, 30], [44, 34], [50, 28]].forEach(([x, h]) => el(st, "abs tree", `left:${x}%;bottom:18%;height:${h}%;${zs(-120)}`));
@@ -97,9 +97,9 @@ function buildAsap(){
   person(st, {x:20, y:16, z:-30, s:.85, helmet:true, c:"#8a5a1a", skin:pick(SKINS)});
   person(st, {x:70, y:15, z:10, cam:true, mask:true, c:"#3a3f4a", skin:pick(SKINS)});
   person(st, {x:86, y:15, z:10, cam:true, mask:true, c:"#2c3a46", skin:pick(SKINS)});
-  person(st, {x:9, y:6, z:60, hero:true, mask:true, c:"#9c6b8a", skin:"#a3704f", hijab:"#5a3a4a", tag:"Bu Sumi", id:"sumi"});
+  person(st, {x:9, y:6, z:60, hero:true, mask:true, c:"#9c6b8a", skin:"#a3704f", hijab:"#5a3a4a", tag:_t("Bu Sumi", "Mrs. Sumi"), id:"sumi"});
   person(st, {x:4, y:6, z:62, s:.55, mask:true, c:"#c96a3a", skin:"#a3704f"}); // her child
-  person(st, {x:78, y:8, z:40, hero:true, c:"#5a5040", skin:"#c99a74", tag:"Pak Bupati", id:"bupati", peci:true});
+  person(st, {x:78, y:8, z:40, hero:true, c:"#5a5040", skin:"#c99a74", tag:_t("Pak Bupati", "Regent"), id:"bupati", peci:true});
   person(st, {x:30, y:6, z:80, hero:true, me:true, mask:true, c:"#e9e6df", tag:"", id:"heroA"});
   person(st, {x:58, y:6, z:80, hero:true, mask:true, mic:true, c:"#9c4f5a", skin:"#b07f5e", tag:"Nadia", id:"nadiaA"});
   // layer 4: a road barrier and a slow veil of smoke in front of everyone
@@ -144,7 +144,7 @@ function buildKamar(){
 function buildTV(){
   const st = stage("stTV");
   el(st, "abs tv-garis", zs(-300));
-  el(st, "abs screen", zs(-260), "<b>DEBAT NASIONAL</b><span>Revisi Undang-Undang Lembaga Antikorupsi</span>");
+  el(st, "abs screen", zs(-260), _t("<b>DEBAT NASIONAL</b><span>Revisi Undang-Undang Lembaga Antikorupsi</span>", "<b>NATIONAL DEBATE</b><span>Revision of the Anti-Corruption Agency Law</span>"));
   // layer 2: the lighting truss and the spots aimed at both lecterns
   el(st, "abs tv-rangka", zs(-150));
   [[20, 22], [47, 0], [74, -22]].forEach(([x, r]) => el(st, "abs tv-lampu", `left:${x}%;top:1%;rotate:${r}deg;${zs(-148)}`));
@@ -177,7 +177,7 @@ function buildSidang(){
   el(st, "abs kipas", `left:22%;bottom:40%;${zs(-240)}`, "<i></i>");
   el(st, "abs emblem2", `left:50%;margin-left:-28px;top:4%;${zs(-270)}`);
   el(st, "abs banner", "transform:translateX(-50%) translateZ(-260px) scale(1.1);top:24%", "RAPAT PARIPURNA DEWAN REPUBLIK SENDARU");
-  [40, 47, 54].forEach((x, i) => person(st, {x, y:40, z:-200, s:.8, seat:true, peci:true, c:i === 1 ? "#1d1d1d" : pick(SUITS), skin:pick(SKINS), tag:i === 1 ? "Ketua" : undefined, id:i === 1 ? "ketua" : undefined}));
+  [40, 47, 54].forEach((x, i) => person(st, {x, y:40, z:-200, s:.8, seat:true, peci:true, c:i === 1 ? "#1d1d1d" : pick(SUITS), skin:pick(SKINS), tag:i === 1 ? _t("Ketua", "Chair") : undefined, id:i === 1 ? "ketua" : undefined}));
   el(st, "abs bench", `left:50%;margin-left:-150px;bottom:36%;${zs(-190)}`);
   el(st, "abs chamberfloor");
   // three rows of members; the centre aisle stays free for the speaker
@@ -190,7 +190,7 @@ function buildSidang(){
       m.classList.add("mbr");
     }
   });
-  person(st, {x:12, y:10, z:10, seat:true, c:"#4a2a2a", skin:"#c99a74", tag:"Koalisi", id:"anggota"});
+  person(st, {x:12, y:10, z:10, seat:true, c:"#4a2a2a", skin:"#c99a74", tag:_t("Koalisi", "Coalition"), id:"anggota"});
   person(st, {x:66, y:10, z:10, seat:true, c:"#3a2450", tag:"Darsono", id:"darsonoS"});
   person(st, {x:46, y:8, z:70, hero:true, me:true, c:"#e9e6df", tag:"", id:"heroS"});
   el(st, "abs micstand", `left:52%;bottom:8%;${zs(72)}`);
@@ -214,7 +214,7 @@ function buildSiaran(){
   const st = stage("stSiaran");
   // layer 1: dark studio and a huge LED wall: the crowd outside holding up phone lights, the title and a live voice meter
   el(st, "abs sr-back", zs(-320));
-  el(st, "abs sr-led", zs(-260), `<div class="sr-crowd"></div><div class="sr-title">Kami Mendengar</div><div class="sr-wave"></div>`);
+  el(st, "abs sr-led", zs(-260), `<div class="sr-crowd"></div><div class="sr-title">${_t("Kami Mendengar", "We Hear You")}</div><div class="sr-wave"></div>`);
   el(st, "abs onair", `left:3%;top:4%;${zs(-250)}`, "ON AIR");
   el(st, "abs monitor", `right:3%;top:4%;${zs(-250)}`, "<b>●</b> NASIONAL · SEMUA KANAL");
   // layer 2: the lighting truss, three cans and one hard beam on the desk
