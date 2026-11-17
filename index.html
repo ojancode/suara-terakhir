@@ -995,7 +995,7 @@ function audioInit(){
   const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   A.noise = buf;
-  loadCam(); loadKetik();
+  loadCam(); loadKetik(); loadTombol();
 }
 function now(){ return A.ctx.currentTime; }
 function noiseSrc(loop){ const s = A.ctx.createBufferSource(); s.buffer = A.noise; s.loop = !!loop; return s; }
@@ -1065,6 +1065,24 @@ function keyHit(vol = 1){
   s.start(t, Math.max(0, KEY_HITS[k] - .008), .11);
 }
 const typingKey = () => keyHit();
+// audio/sfx/tombol.mp3: one button press (trimmed). Plays on every UI button except the tap-to-type helper.
+let tombolBuf = null;
+function loadTombol(){
+  fetch("audio/sfx/tombol.mp3").then(r => r.ok ? r.arrayBuffer() : null)
+    .then(b => b && A.ctx.decodeAudioData(b)).then(buf => { if (buf) tombolBuf = buf; }).catch(() => {});
+}
+function buttonPress(){
+  if (!A.ctx) return;
+  if (!tombolBuf){ click(.6); return; }
+  const s = A.ctx.createBufferSource(), g = gainN(.5);
+  s.buffer = tombolBuf; s.connect(g).connect(A.sfx); s.start(now());
+}
+// bubble phase on purpose: the button's own handler runs first, so muting is silent and unmuting is heard
+document.addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b || b.id === "kbdBtn") return;
+  audioInit(); A.ctx.resume(); buttonPress();
+});
 function shutter(){
   if (!A.ctx) return;
   if (!camBuf){ click(.8); setTimeout(() => click(.5), 60); return; }
@@ -1565,8 +1583,8 @@ function card({parts, after = "", btn, vo, voFrom = 0, mark = "", alt = ""}){
       c.classList.add("hidden"); document.removeEventListener("keydown", onKey); if (A.vo) release(A.vo); duck(false); stageEnter(); res(val); typer.focus();
     };
     const onKey = e => {
-      if (e.key === "Enter"){ e.preventDefault(); go(); }
-      else if (alt && e.key === "Escape"){ e.preventDefault(); go("alt"); }
+      if (e.key === "Enter"){ e.preventDefault(); b.click(); }
+      else if (alt && e.key === "Escape"){ e.preventDefault(); a2.click(); }
     };
     b.onclick = () => go();
     if (a2) a2.onclick = () => go("alt");
@@ -1668,7 +1686,7 @@ async function showBoard(tab = lbTab){
 let lbBack = null;
 // capture phase: while the board is open no key reaches the game (Enter would start or restart it)
 function lbKeys(e){
-  if (e.key === "Escape"){ e.preventDefault(); closeBoard(); }
+  if (e.key === "Escape"){ e.preventDefault(); $("lbClose").click(); }
   else if (e.key === "ArrowRight" || e.key === "ArrowLeft"){
     if (!e.target.closest(".lb-tabs")) return;
     const t = lbTab === "skor" ? "kpm" : "skor"; showBoard(t); $(t === "skor" ? "lbTabSkor" : "lbTabKpm").focus();
@@ -2236,8 +2254,8 @@ function tour(id, steps){
     const go = () => { if (++i >= steps.length) close(false); else show(); };
     // capture phase: Enter must not also start the game, submit an answer or skip a line
     const onKey = e => {
-      if (e.key === "Enter" || e.key === "ArrowRight"){ e.preventDefault(); e.stopPropagation(); go(); }
-      else if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); close(true); }
+      if (e.key === "Enter" || e.key === "ArrowRight"){ e.preventDefault(); e.stopPropagation(); next.click(); }
+      else if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); box.querySelector(".t-skip").click(); }
       else if (e.key !== "Tab") e.stopPropagation();
     };
     next.onclick = go;
@@ -2957,7 +2975,7 @@ function askReset(){
   const close = () => { box.classList.add("hidden"); document.removeEventListener("keydown", onKey, true); typer.focus(); };
   // capture phase: keep Enter/Escape away from the game while the dialog is open
   const onKey = e => {
-    if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); close(); }
+    if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); $("confirmNo").click(); }
     else if (e.key === "Enter"){ e.stopPropagation(); }
   };
   document.addEventListener("keydown", onKey, true);
@@ -3058,7 +3076,7 @@ $("contBtn").onclick = async () => {
   if (!$("title").classList.contains("hidden")) tour("intro", TOUR_STEPS.intro);
 }, 400));
 $("nameBtn").onclick = submitName;
-$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); submitName(); } else typingKey(); });
+$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("nameBtn").click(); } else typingKey(); });
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && !$("title").classList.contains("hidden")){ e.preventDefault(); (document.activeElement === $("contBtn") ? $("contBtn") : $("startBtn")).click(); }
 });
