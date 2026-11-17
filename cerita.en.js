@@ -1,5 +1,5 @@
 // =====================================================================
-// SUARA TERAKHIR (THE LAST VOICE): English story text (Prologue to Chapter 9)
+// SUARA TERAKHIR (THE LAST VOICE): English story text (Prologue to Chapter 7). The data functions bab2Data..bab9Data keep the OLD chapter numbers; the current order is CHAPTERS.
 // Same logic as cerita.js; only the visible text is translated. Loaded instead of cerita.js
 // when the player picks English on the title screen (see the loader in index.html).
 // All characters, places and companies are fictional.
@@ -19,45 +19,33 @@ const EVIDENCE = {
   sertifikat: { tag:"Sea certificates", text:"263 land certificates issued for plots in the sea." }
 };
 
-// Promises not yet kept. The people collect on them in Chapter 8.
+// Promises not yet kept. The people collect on them in Chapter 6.
 const PROMISES = {
   tanggul_sebulan:  "build the levee within one month",
   nama_kayu:        "name the owner of the logs tomorrow",
   penjara_sawit:    "put the palm oil company in jail",
   rumah_warga:      "replace every damaged home",
   bansos_besok:     "get all the aid to the shelter by tomorrow morning",
-  uang_tunai:       "give cash to every family at the shelter",
-  cair_12jam:       "release the aid within twelve hours",
-  cair_minggu_ini:  "release the aid this week",
-  beras_turun:      "bring rice prices down next month",
   beras_murah:      "make rice cheaper than Bram promised",
   politik_bersih:   "clean up politics within five years",
-  biaya_anak:       "pay for the treatment of every sick child",
-  langit_biru:      "bring back blue skies next week",
   bukti_pendengung: "prove who paid the buzzers",
   mundur:           "resign from the house if the revision passed",
   rev_gagal:        "stop the revision of the law"
 };
-// A caller's line collecting on each promise (Chapter 8). VO: b8_tagih_<id>_l / _p
+// A caller's line collecting on each promise (Chapter 6). VO: b8_tagih_<id>_l / _p
 const TAGIH = {
   tanggul_sebulan:  "You promised the levee would stand within one month. It's been months, and all we have is a project sign.",
   nama_kayu:        "You promised to name the owner of those logs the very next day. We're still waiting.",
   penjara_sawit:    "You promised to put the palm oil company in jail the next day. Why are they still free?",
   rumah_warga:      "You promised every one of our damaged homes would be replaced. To this day, we still live in tents.",
   bansos_besok:     "You promised all the aid would reach the shelter the next morning. We waited for days.",
-  uang_tunai:       "You promised cash for every family at the shelter. That money never came.",
-  cair_12jam:       "You promised the aid would be released within twelve hours. In the end, we waited two more weeks.",
-  cair_minggu_ini:  "You promised the aid would be released that same week. In the end, we waited a month.",
-  beras_turun:      "You promised rice prices would fall the next month. Now they have gone up again.",
   beras_murah:      "You promised rice would be cheaper than what Bram promised. At the market, the price never changed.",
   politik_bersih:   "You promised to clean up politics within five years. Tonight, you're the one about to be arrested.",
-  biaya_anak:       "You promised to pay for the children made sick by the smoke. My child's hospital bill is still unpaid.",
-  langit_biru:      "You promised our sky would be blue again within a week. The smoke only cleared two months later.",
   bukti_pendengung: "You promised to prove who paid the buzzers. Where is the proof?",
   mundur:           "You promised to resign if that revision passed. It passed last week, and you're still in the house.",
   rev_gagal:        "You promised that revision would never pass. Last week, it passed."
 };
-const SAFE_OFFER = 10; // this many safe answers make Mr. Darsono offer a seat (hidden ending)
+const SAFE_OFFER = 7; // this many safe answers make Mr. Darsono offer a seat (hidden ending)
 
 // ---------------------------------------------------------------------
 // PROLOGUE
@@ -166,11 +154,101 @@ async function bab1(){
       ["Start with a capital letter", "Mind the punctuation", S.relaxed ? "No time limit" : "There's a time limit"]) });
   S.rec = true; // record typing stats for this chapter
   await runForum(bab1Data(), {...FORUMS.cegat, who:"Nadia · Reporter", node:"nadia", folder:"nadia", hero:"heroF", prompt:"Answer Nadia's question"});
+  await say("Nadia · Reporter", "The number on that log matches a logging permit held by PT Cakrawala Sawit Sendaru. I'll find out who owns it.", null, {vo:"b1_nadia_kayu", folder:"nadia"});
   await chapterEnd(1, {
     tinggi:["The Only Official Who Waded Into the Water", "Nadia's article is read by millions. Your name is getting known, and the Round Table is taking note of it."],
     sedang:["New Representative: Hope or Lip Service?", "The public is still unsure. Your chance isn't over yet."],
     rendah:["Just Like All the Others", "People are disappointed. Lost trust is hard to win back."]
-  }, "The Missing Aid");
+  }, "Aid and Prices");
+}
+
+// ---------------------------------------------------------------------
+// CHAPTER 2: AID AND PRICES (shelter + Comment Section, then a podcast; new meters: Elite Pressure and Pending Promises)
+// ---------------------------------------------------------------------
+async function bab2(){
+  chapterStart(2, "Aid and Prices", "posko", "feedOn", "posko");
+  await card({ vo:"bab2_buka", voFrom:2, mark:2, btn:"Open the Comment Section", parts:[
+    {tag:"h2", text:"Chapter 2"}, {tag:"h1", text:"Aid and Prices"},
+    {tag:"p", cls:"story", text:"Two weeks after the flood, the social aid still hasn't arrived, and the price of rice has risen three times in a month. At the shelter, people queue with empty plates, while your name starts trending on social media."}],
+    after: brief("New Forum", "Comment Section", "Residents' comments pop up one by one on your phone. Reply by typing one of the answers. Every reply is read by thousands.",
+      ["New meter: Elite Pressure", "New meter: Pending Promises", S.relaxed ? "No time limit" : "Time is still generous"]) });
+  await say("Narrator", "Your phone buzzes. The video of your riverside interview has been watched two million times.", null, {vo:"b2_n1"});
+  S.rec = true;
+  const F = {...FORUMS.sosmed, who:"Netizens", folder:"warga", hero:"heroPk", prompt:"Reply to this comment",
+    timeout:{line:"The comment sinks without an answer. Your silence is taken as your answer.", d:-6}};
+  const data = bab2Data();
+  await runForum(data.slice(0, 2), F);
+  await say("Narrator", "A message arrives from an unknown number. The sender says her name is Laras, an employee at the Ministry of Social Affairs.", null, {vo:"b2_n2"});
+  await say("Ms. Laras", "I can't talk long. I'm sending you one document. Read it carefully, then mark the part that matters most.", null, {vo:"b2_laras1", folder:"laras"});
+  await runForum(data.slice(2), F);
+  await say("Narrator", "Three days later, the Minister of Social Affairs is dismissed. Part of the aid is released, but not a single member of the Round Table is touched.", null, {vo:"b2_n3"});
+  await say("Ms. Laras", "One more thing. This year's rice import permit is held by a single company. Its commissioner is Haryo Darsono, Mr. Darsono's own brother.", null, {vo:"b2_laras2", folder:"laras"});
+  S.ev.add("impor");
+  // second backdrop: the podcast studio
+  await switchScene("pod", "", "siniar");
+  await card({ vo:"bab3_buka", voFrom:2, btn:"Enter the Studio", parts:[
+    {tag:"h2", text:"A Few Days Later"}, {tag:"h1", text:"Honest Talk"},
+    {tag:"p", cls:"story", text:"Cooking oil disappears from the markets. A popular podcast, Honest Talk, invites you to speak."}],
+    after: brief("New Forum", "Honest Talk Podcast", "The conversation is long and relaxed. You have more time, but precision matters more: a messy sentence sounds unconvincing.",
+      ["Precision matters more than speed", "Be careful with promises"]) });
+  berita(["Sole rice import permit held by PT Bundar Pangan Sejahtera, commissioner Haryo Darsono", "Rice prices up three times in a month", "Cooking oil vanishes from Sendaru's markets"]);
+  await say("Dimas · Honest Talk", "Welcome to Honest Talk. Today our guest is the representative whose video is going viral. Just relax. In here, we speak honestly.", $("dimas"), {vo:"b3_dimas0", folder:"dimas"});
+  const P = {...FORUMS.siniar, who:"Dimas · Honest Talk", node:"dimas", folder:"dimas", hero:"heroPod", prompt:"Answer Dimas's question",
+    timeout:{line:"The silence goes on too long. Dimas laughs awkwardly and changes the subject.", d:-6}};
+  const pod = bab3Data();
+  await runForum(pod.slice(0, 1), P);
+  await say("Narrator", "On another podcast, Bram Satria promises rice at five thousand rupiah a kilo. The clip is watched ten million times.", null, {vo:"b3_n1"});
+  await say("Bram Satria", "Rice for five thousand! That's my promise. People don't need math, people need courage!", null, {vo:"b3_bram1", folder:"bram"});
+  await runForum(pod.slice(1), P);
+  await chapterEnd(2, {
+    tinggi:["Refusing Sweet Promises, Young Representative Wins Listeners", "Your clip is shared with one simple caption: turns out honesty is interesting."],
+    sedang:["Five-Thousand Rice or Plain Honesty? The Public Is Split", "Some listeners praise you, others trust Bram's promise more."],
+    rendah:["Bram Satria Soars, Young Representative Left Behind", "Sweet promises spread faster than honest explanations."]
+  }, "Smoke and Smear", null, "bab3");
+}
+
+// ---------------------------------------------------------------------
+// CHAPTER 3: SMOKE AND SMEAR (fire site + Doorstop Interview, then a fast Comment Section; new mechanic: typos become twisted headlines)
+// ---------------------------------------------------------------------
+async function bab3(){
+  chapterStart(3, "Smoke and Smear", "asap", "", "asap");
+  await card({ vo:"bab4_buka", voFrom:2, mark:3, btn:"Go to the Site", parts:[
+    {tag:"h2", text:"Chapter 3"}, {tag:"h1", text:"Smoke and Smear"},
+    {tag:"p", cls:"story", text:"A long dry season. The sky over West Sendaru turns yellow, schools close, and hospitals fill with people who can't breathe. The officials call it a normal dry season."}],
+    after: brief("Forum", "Doorstop Interview at the Fire Site", "Here, no answer is completely wrong. Every answer has a price.",
+      ["More nuanced choices", "Elite Pressure matters more", S.relaxed ? "No time limit" : "There is a time limit"], false) });
+  berita(["Hotspots: 287 of 312 lie inside PT Cakrawala Sawit Sendaru's concession", "Haze closes 40 schools in West Sendaru", "Clinics full of patients struggling to breathe", "Regent: palm oil investors feed this region"]);
+  await say("Nadia · Reporter", "We meet again. This time the water's been swapped for smoke.", $("nadiaA"), {vo:"b4_nadia0", folder:"nadia"});
+  await say("Ms. Laras", "This week's satellite image of the hotspots: 287 of 312 lie inside the concession of PT Cakrawala Sawit Sendaru. Its shareholders include a Round Table member.", null, {vo:"b4_laras2", folder:"laras"});
+  S.ev.add("satelit");
+  S.rec = true;
+  const F = {...FORUMS.cegat, who:"Nadia · Reporter", node:"nadiaA", folder:"nadia", hero:"heroA", prompt:"Answer this question"};
+  await runForum(bab4Data(), F);
+  // second backdrop: the smear night
+  await switchScene("kamar", "feedOn hot", "fitnah");
+  await card({ vo:"bab5_buka", voFrom:2, btn:"Face the Comment Section", parts:[
+    {tag:"h2", text:"Before Dawn"}, {tag:"h1", text:"Smear"},
+    {tag:"p", cls:"story", text:"Two days later, at two in the morning, a video starts going around: you, in a parking lot, taking a thick envelope. Within an hour, #FakeRepresentative is the top trending topic."}],
+    after: brief("New Mechanic", "Typos Become Twisted Headlines", "Comments come faster and you have less time. From now on, a sentence with typos can be cut up and turned into a headline that brings you down.",
+      [S.relaxed ? "No time limit" : "Tighter time limits", "Check every letter", "Hoaxes spread fast"]) });
+  await say("Narrator", "Your phone won't stop buzzing. Thousands of new accounts with blank profile pictures swarm your comments.", null, {vo:"b5_n1"});
+  feedNoise(NOISE, true);
+  const K = {...FORUMS.sosmed2, who:"Netizens", folder:"warga", hero:"heroK", prompt:"Reply before the hoax spreads",
+    timeout:{line:"You replied too late. The clip has already been shared a hundred thousand times.", d:-8}};
+  const data = bab5Data();
+  await runForum(data.slice(0, 2), K);
+  await say("Nadia · Private Message", "I'm checking that video. Something's off with the shadows. Don't say anything careless yet.", null, {vo:"b5_nadia1", folder:"nadia"});
+  await runForum(data.slice(2, 3), K);
+  await say("Nadia · Private Message", "Confirmed. The video was edited: your shadow falls to the left, but the shadow of the car next to you falls to the right. I've got the original footage.", null, {vo:"b5_nadia2", folder:"nadia"});
+  S.ev.add("video");
+  feedNoise(null, false);
+  addPost("@nadia.prameswari", "The original footage from that parking lot. No envelope. Compare them yourself.");
+  await runForum(data.slice(3), K);
+  await chapterEnd(3, {
+    tinggi:["Smear Video Exposed, Support Grows Stronger", "Nadia's original footage spreads faster than the smear. The Round Table is getting nervous."],
+    sedang:["Video Proven Fake, but Doubts Remain", "Some people already believed the first clip."],
+    rendah:["Smear Debunked, but the Name Is Already Stained", "Your messy sentences became a joke too."]
+  }, "National Debate", null, "bab5");
 }
 
 // ---------------------------------------------------------------------
@@ -200,17 +278,6 @@ function bab2Data(){
         {t:"Maybe the national and local data just don't match yet.", vo:"b2_q2_sb", d:-2, safe:true, r:"It sounds reasonable, but also like making excuses for the ministry."},
         {t:"If the number is right, show us the list of recipients today.", vo:"b2_q2_sc", d:+6, e:+12, r:"A sharp challenge. The ministry doesn't answer, but they heard it."}
       ]},
-    { who:"@infoviral_88", q:"People say the aid was held back because folks here didn't vote for the ruling party. Is that true?", vo:"b2_q3",
-      opts:[
-        {t:"I don't have proof of that yet. Let's wait until the data is clear.", vo:"b2_q3_a", d:+8, r:"Some users praise you for not spreading rumors."},
-        {t:"Absolutely right, this is clearly a political game!", vo:"b2_q3_b", d:-8, e:+10, r:"The rumor turns out to be a hoax. Now you're accused of helping spread it."},
-        {t:"That's a hoax. I'll report whoever spreads it to the police.", vo:"b2_q3_c", d:-6, r:"Your threat scares people out of asking questions. The comments go quiet."}
-      ],
-      sulit:[
-        {t:"I haven't seen any proof, so I won't start guessing.", vo:"b2_q3_sa", d:+8, r:"Some users praise you for not spreading rumors."},
-        {t:"It could be. This kind of pattern has happened before.", vo:"b2_q3_sb", d:-6, e:+8, r:"The hoax spreaders use your words as confirmation."},
-        {t:"Impossible. The government would never be that cruel.", vo:"b2_q3_sc", d:-4, safe:true, r:"People who have gone hungry for two weeks don't believe that defense."}
-      ]},
     { who:"Document from Ms. Laras", q:"Social Aid Distribution Report, Muara Hilir District. Which part matters most?", silent:true, noTimer:true, feed:false, node:null,
       prompt:"Mark the most important part of the document", hint:"Type the line you think matters most, then press Enter.",
       opts:[
@@ -223,52 +290,7 @@ function bab2Data(){
         {t:"Distribution partner: PT Bundar Logistik Sendaru.", d:+2, r:"The partner's name matters, but without proof of wrongdoing, a name isn't enough."},
         {t:"The distribution budget doubled compared to last year.", d:+2, r:"Suspicious, but a budget increase could have a reason."}
       ]},
-    { who:"@pak_rt_muara", q:"I'm the neighborhood head here. If you really care, what can you do for us now, not later?", vo:"b2_q4",
-      opts:[
-        {t:"Today I'll buy rice for this shelter with my own money.", vo:"b2_q4_a", d:+8, r:"Photos of rice sacks at the shelter go around. Small help, but real."},
-        {t:"Next year I'll propose an additional budget.", vo:"b2_q4_b", d:-6, safe:true, r:`"Next year?" the neighborhood head replies. "We need to eat today."`},
-        {t:"I'm a victim of the system too, so there isn't much I can do.", vo:"b2_q4_c", d:-10, r:"Users call your reply the laziest excuse of the week."}
-      ],
-      sulit:[
-        {t:"This afternoon I'll bring rice and medicine to the shelter and hand it out myself.", vo:"b2_q4_sa", d:+8, r:"Photos of rice sacks at the shelter go around. Small help, but real."},
-        {t:"I've contacted several donors. Hopefully we hear back soon.", vo:"b2_q4_sb", d:+2, r:"Good, but nobody can eat hopefully."},
-        {t:"Starting tomorrow, I'll give cash to every family at the shelter.", vo:"b2_q4_sc", d:+2, promise:"uang_tunai", r:"Your comment is flooded with thanks. But where will the money come from?"}
-      ]},
-    { who:"@bramsatria", q:"If I were the representative, social aid would be released within twenty-four hours. People need action, not audits.", vo:"b2_q5", folder:"bram",
-      opts:[
-        {t:"Fast aid is good. Even better is aid that doesn't get stolen on the way.", vo:"b2_q5_a", d:+10, r:"Your reply is quoted thousands of times. Bram doesn't reply again."},
-        {t:"Go ahead and prove it, if you can.", vo:"b2_q5_b", d:-3, r:"The little spat becomes a show, not a solution."},
-        {t:"I can release it in twelve hours too!", vo:"b2_q5_c", d:+2, promise:"cair_12jam", r:"Now two promises are racing each other. The people will collect on both."}
-      ],
-      sulit:[
-        {t:"An audit is exactly what makes the next round of aid reach the right people.", vo:"b2_q5_sa", d:+10, r:"Your reply is quoted thousands of times. Bram doesn't reply again."},
-        {t:"Come on, let's just work together. People don't need us fighting.", vo:"b2_q5_sb", d:+3, safe:true, r:"A calm line, but Bram uses it to pose for photos with the residents."},
-        {t:"I agree. This week the aid will definitely be released.", vo:"b2_q5_sc", d:+3, promise:"cair_minggu_ini", r:"People are happy to read it. But there are only four days left this week."}
-      ]}
   ];
-}
-async function bab2(){
-  chapterStart(2, "The Missing Aid", "posko", "feedOn", "posko");
-  await card({ vo:"bab2_buka", voFrom:2, mark:2, btn:"Open the Comment Section", parts:[
-    {tag:"h2", text:"Chapter 2"}, {tag:"h1", text:"The Missing Aid"},
-    {tag:"p", cls:"story", text:"Two weeks after the flood, the social aid still hasn't arrived. At the shelter, people queue with empty plates, while your name starts trending on social media."}],
-    after: brief("New Forum", "Comment Section", "Residents' comments pop up one by one on your phone. Reply by typing one of the answers. Every reply is read by thousands.",
-      ["New meter: Elite Pressure", "Attacking officials raises Elite Pressure", S.relaxed ? "No time limit" : "Time is still generous"]) });
-  await say("Narrator", "Your phone buzzes. The video of your riverside interview has been watched two million times.", null, {vo:"b2_n1"});
-  S.rec = true;
-  const F = {...FORUMS.sosmed, who:"Netizens", folder:"warga", hero:"heroPk", prompt:"Reply to this comment",
-    timeout:{line:"The comment sinks without an answer. Your silence is taken as your answer.", d:-6}};
-  const data = bab2Data();
-  await runForum(data.slice(0, 3), F);
-  await say("Narrator", "A message arrives from an unknown number. The sender says her name is Laras, an employee at the Ministry of Social Affairs.", null, {vo:"b2_n2"});
-  await say("Ms. Laras", "I can't talk long. I'm sending you one document. Read it carefully, then mark the part that matters most.", null, {vo:"b2_laras1", folder:"laras"});
-  await runForum(data.slice(3), F);
-  await say("Narrator", "Three days later, the Minister of Social Affairs is dismissed. Part of the aid is released, but not a single member of the Round Table is touched.", null, {vo:"b2_n3"});
-  await chapterEnd(2, {
-    tinggi:["Aid Data Exposed, Social Affairs Minister Dismissed", "People start receiving aid. But the minister was only a scapegoat, and the Round Table stays intact."],
-    sedang:["Minister Dismissed, Residents Still Waiting", "The public is starting to notice you, but doesn't fully trust you yet."],
-    rendah:["Aid Partly Released, Young Representative Drowned Out", "People feel your replies only added to the noise in the comments."]
-  }, "Rising Prices");
 }
 
 // ---------------------------------------------------------------------
@@ -286,17 +308,6 @@ function bab3Data(){
         {t:"The goods exist, they're just stuck in warehouses. I want to know who is holding them.", vo:"b3_q1_sa", d:+10, e:+5, r:`Dimas leans back in his chair. "Now that's an honest conversation."`},
         {t:"World prices are rising, and we are feeling the impact.", vo:"b3_q1_sb", d:-2, safe:true, r:"Partly true, but listeners know the warehouses in Sendaru are full."},
         {t:"This is a government failure. I'm ashamed to be part of it.", vo:"b3_q1_sc", d:+3, e:+8, r:"A brave admission, but listeners are waiting for a way out."}
-      ]},
-    { q:"Our listeners want certainty. Can you promise that rice prices will fall next month?", vo:"b3_q2",
-      opts:[
-        {t:"I won't promise something I can't be sure of yet.", vo:"b3_q2_a", d:+8, r:"Dimas pauses. It's an answer he rarely hears from a politician."},
-        {t:"Yes, next month rice prices will definitely fall.", vo:"b3_q2_b", d:+3, promise:"beras_turun", r:"The clip is cut and shared. Next month, everyone will be checking prices."},
-        {t:"That depends on the central government, not on me.", vo:"b3_q2_c", d:-6, safe:true, r:`"Then why did we vote for you?" a listener writes.`}
-      ],
-      sulit:[
-        {t:"One thing I can promise: I'll make the rice stock data public.", vo:"b3_q2_sa", d:+10, r:"A small promise, but one that can be kept. Dimas nods."},
-        {t:"I'll do everything I can to bring prices down next month.", vo:"b3_q2_sb", d:+3, promise:"beras_turun", r:"It sounds careful, but listeners still write it down as a promise."},
-        {t:"If those warehouses are opened, prices will surely fall within a month.", vo:"b3_q2_sc", d:+4, promise:"beras_turun", r:"The logic makes sense, but that word surely will be collected on."}
       ]},
     { q:"Bram Satria is promising rice at five thousand rupiah a kilo. What's your response?", vo:"b3_q3",
       opts:[
@@ -320,44 +331,7 @@ function bab3Data(){
         {t:"It's okay to be disappointed, as long as you still show up to vote.", vo:"b3_q4_sb", d:+4, r:"A good message, even if it sounds like a public service ad."},
         {t:"Give me five years, and I'll clean up the politics of this country.", vo:"b3_q4_sc", d:+2, promise:"politik_bersih", r:"It sounds grand. In five years, this clip will be played again."}
       ]},
-    { who:"Document from Ms. Laras", q:"This Year's Rice Import Permits. Which part matters most?", silent:true, noTimer:true, node:null,
-      prompt:"Mark the most important part of the document", hint:"Type the line you think matters most, then press Enter.",
-      opts:[
-        {t:"Sole permit holder: PT Bundar Pangan Sejahtera, commissioner Haryo Darsono.", d:+6, ev:"impor", r:"The commissioner of the sole import permit holder turns out to be Mr. Darsono's younger brother."},
-        {t:"Import quota this year: 2 million tons.", d:0, r:"A big number, but it doesn't show who benefits."},
-        {t:"Unloading port: Tanjung Sendaru.", d:0, r:"Just a location. Nothing odd there."}
-      ],
-      sulit:[
-        {t:"Commissioner of PT Bundar Pangan Sejahtera: Haryo Darsono.", d:+6, ev:"impor", r:"The commissioner of the sole import permit holder turns out to be Mr. Darsono's younger brother."},
-        {t:"The import permit was issued two days before prices started rising.", d:+3, r:"Suspicious timing, but who benefits?"},
-        {t:"The import quota is split evenly among seven companies.", d:0, r:"It looks fair on paper. The problem is in another line."}
-      ]}
   ];
-}
-async function bab3(){
-  chapterStart(3, "Rising Prices", "pod", "", "siniar");
-  await card({ vo:"bab3_buka", voFrom:2, mark:3, btn:"Enter the Studio", parts:[
-    {tag:"h2", text:"Chapter 3"}, {tag:"h1", text:"Rising Prices"},
-    {tag:"p", cls:"story", text:"Cooking oil disappears from the markets, and the price of rice rises three times in a month. A popular podcast, Honest Talk, invites you to speak."}],
-    after: brief("New Forum", "Honest Talk Podcast", "The conversation is long and relaxed. You have more time, but precision matters more: a messy sentence sounds unconvincing.",
-      ["New meter: Pending Promises", "Precision matters more than speed", "Be careful with promises"]) });
-  await say("Dimas · Honest Talk", "Welcome to Honest Talk. Today our guest is the representative whose video is going viral. Just relax. In here, we speak honestly.", $("dimas"), {vo:"b3_dimas0", folder:"dimas"});
-  S.rec = true;
-  const F = {...FORUMS.siniar, who:"Dimas · Honest Talk", node:"dimas", folder:"dimas", hero:"heroPod", prompt:"Answer Dimas's question",
-    timeout:{line:"The silence goes on too long. Dimas laughs awkwardly and changes the subject.", d:-6}};
-  const data = bab3Data();
-  await runForum(data.slice(0, 2), F);
-  await say("Narrator", "On another podcast, Bram Satria promises rice at five thousand rupiah a kilo. The clip is watched ten million times.", null, {vo:"b3_n1"});
-  await say("Bram Satria", "Rice for five thousand! That's my promise. People don't need math, people need courage!", null, {vo:"b3_bram1", folder:"bram"});
-  await runForum(data.slice(2, 4), F);
-  await say("Narrator", "After the show, a message arrives from Ms. Laras.", null, {vo:"b3_n2"});
-  await say("Ms. Laras", "I got the list of rice import permit holders. There's one name you might recognize.", null, {vo:"b3_laras1", folder:"laras"});
-  await runForum(data.slice(4), F);
-  await chapterEnd(3, {
-    tinggi:["Refusing Sweet Promises, Young Representative Wins Listeners", "Your clip is shared with one simple caption: turns out honesty is interesting."],
-    sedang:["Five-Thousand Rice or Plain Honesty? The Public Is Split", "Some listeners praise you, others trust Bram's promise more."],
-    rendah:["Bram Satria Soars, Young Representative Left Behind", "Sweet promises spread faster than honest explanations."]
-  }, "Yellow Sky");
 }
 
 // ---------------------------------------------------------------------
@@ -365,40 +339,6 @@ async function bab3(){
 // ---------------------------------------------------------------------
 function bab4Data(){
   return [
-    { q:"The local government says these fires were started by farmers clearing land by burning it. Do you agree?", vo:"b4_q1",
-      opts:[
-        {t:"Small farmers can't burn thousands of hectares on their own.", vo:"b4_q1_a", d:+10, e:+5, r:"The farmers watching nod. Nadia writes down: thousands of hectares."},
-        {t:"We need to teach farmers to stop burning their land.", vo:"b4_q1_b", d:-2, safe:true, r:"Not wrong, but it puts the blame on the people with the least power."},
-        {t:"That's slander. Our farmers have never burned anything.", vo:"b4_q1_c", d:-4, r:"Some farmers do burn small plots. Your line is easy to knock down."}
-      ],
-      sulit:[
-        {t:"Before we blame anyone, match the hotspots against the land permit map.", vo:"b4_q1_sa", d:+10, e:+5, r:"Nadia pulls her mask down for a second. \"Now that's the right question.\""},
-        {t:"Everyone, farmers included, has to stop burning land.", vo:"b4_q1_sb", d:0, safe:true, r:"Fair on paper, but the big corporations get to hide behind it too."},
-        {t:"This is the corporations. The farmers are just the scapegoats.", vo:"b4_q1_sc", d:+5, e:+12, r:"The crowd cheers. But without data, that accusation is easy to break."}
-      ]},
-    { who:"Mrs. Sumi · Resident", node:"sumi", folder:"warga", q:"My kid's been coughing for a week. School's closed, the clinic's full. Where are we supposed to go, {p}?", vo:"b4_q2",
-      opts:[
-        {t:"Starting tonight I'm opening a shelter house with air purifiers.", vo:"b4_q2_a", d:+10, r:"Mrs. Sumi grips your hand. That night, thirty children sleep at the shelter house."},
-        {t:"Wear a mask and stay indoors as much as you can.", vo:"b4_q2_b", d:-3, safe:true, r:"Good advice, except Mrs. Sumi's house is already full of smoke."},
-        {t:"Hang in there. The rain will come soon.", vo:"b4_q2_c", d:-8, r:"Mrs. Sumi looks away. The sky is still yellow, and there's no sign of rain."}
-      ],
-      sulit:[
-        {t:"Tonight I'm opening a shelter house with air purifiers, just for the kids.", vo:"b4_q2_sa", d:+10, r:"Mrs. Sumi grips your hand. That night, thirty children sleep at the shelter house."},
-        {t:"I've asked the health office to send more staff to the clinic.", vo:"b4_q2_sb", d:+4, r:"The right move, though Mrs. Sumi still has to wait in line for hours."},
-        {t:"I'll pay for the treatment of every sick child here.", vo:"b4_q2_sc", d:+3, promise:"biaya_anak", r:"The mothers cry with relief. But the number of sick children keeps growing."}
-      ]},
-    { who:"Document from Ms. Laras", q:"Satellite Hotspot Images, West Sendaru, This Week. Which part matters most?", silent:true, noTimer:true, node:null,
-      prompt:"Mark the most important part of the document", hint:"Type the line you think matters most, then press Enter.",
-      opts:[
-        {t:"Hotspots: 287 of 312 are inside the PT Cakrawala Sawit Sendaru concession.", d:+6, ev:"satelit", r:"Almost every hotspot is on one company's land. Its shareholder sits on the Round Table."},
-        {t:"Residents' land: 25 hotspots, mostly small gardens.", d:0, r:"True, but that's only a small part of all the hotspots."},
-        {t:"Wind direction: southwest, 20 kilometers per hour.", d:0, r:"Useful for guessing where the smoke goes, but it doesn't say who did it."}
-      ],
-      sulit:[
-        {t:"A total of 287 of the 312 hotspots are inside the PT Cakrawala Sawit Sendaru concession.", d:+6, ev:"satelit", r:"Almost every hotspot is on one company's land. Its shareholder sits on the Round Table."},
-        {t:"Residents' land recorded 25 hotspots, mostly small gardens.", d:0, r:"True, but that's only a small part of all the hotspots."},
-        {t:"The burned peatland reached 40,000 hectares, twice as much as last year.", d:+2, r:"A horrifying number, but it doesn't say who did it."}
-      ]},
     { q:"If you've got proof, would you dare say the company's name on camera?", vo:"b4_q3",
       opts:[
         {t:"I'm handing the company's name and the data to law enforcement.", vo:"b4_q3_a", d:+6, e:+5, r:"A careful move. Your data is safe with the authorities, but the public still doesn't know the name."},
@@ -421,39 +361,7 @@ function bab4Data(){
         {t:"Let's find a middle ground, so investment goes on and the forest stays.", vo:"b4_q4_sb", d:0, safe:true, r:"A middle ground sounds wise, but smoke doesn't do middle grounds."},
         {t:"If those investors broke the law, their permits should go today.", vo:"b4_q4_sc", d:+5, e:+14, r:"Firm and on target. In the capital, someone writes your name down."}
       ]},
-    { q:"What's your message for the people sleeping in masks tonight?", vo:"b4_q5",
-      opts:[
-        {t:"You're not alone. Someone caused this smoke, and we will go after them.", vo:"b4_q5_a", d:+10, r:"Nadia slowly lowers her camera. Nobody cheers, but everyone heard."},
-        {t:"Stay healthy and drink plenty of water.", vo:"b4_q5_b", d:-2, safe:true, r:"Good health advice, but it sounds like a clinic announcement."},
-        {t:"I promise your sky will be blue again next week.", vo:"b4_q5_c", d:+2, promise:"langit_biru", r:"People want to believe it. But peat fires can burn for months."}
-      ],
-      sulit:[
-        {t:"Breathing clean air is your right. It's not a gift from anyone.", vo:"b4_q5_sa", d:+10, r:"Nadia slowly lowers her camera. Nobody cheers, but everyone heard."},
-        {t:"Stay inside for now and look after the kids until the air gets better.", vo:"b4_q5_sb", d:+2, safe:true, r:"A caring message, but it doesn't say when this will end."},
-        {t:"Next week your sky will be blue again, I guarantee it.", vo:"b4_q5_sc", d:+2, promise:"langit_biru", r:"People want to believe it. But peat fires can burn for months."}
-      ]}
   ];
-}
-async function bab4(){
-  chapterStart(4, "Yellow Sky", "asap", "", "asap");
-  await card({ vo:"bab4_buka", voFrom:2, mark:4, btn:"Go to the Site", parts:[
-    {tag:"h2", text:"Chapter 4"}, {tag:"h1", text:"Yellow Sky"},
-    {tag:"p", cls:"story", text:"A long dry season. The sky over West Sendaru turns yellow, schools close, and hospitals fill with people who can't breathe. The officials call it a normal dry season."}],
-    after: brief("Forum", "Doorstop Interview at the Fire Site", "From this chapter on, no answer is completely wrong. Every answer has a price.",
-      ["More nuanced choices", "Elite Pressure matters more", S.relaxed ? "No time limit" : "There is a time limit"], false) });
-  await say("Nadia · Reporter", "We meet again. This time the water's been swapped for smoke.", $("nadiaA"), {vo:"b4_nadia0", folder:"nadia"});
-  S.rec = true;
-  const F = {...FORUMS.cegat, who:"Nadia · Reporter", node:"nadiaA", folder:"nadia", hero:"heroA", prompt:"Answer this question"};
-  const data = bab4Data();
-  await runForum(data.slice(0, 2), F);
-  await say("Ms. Laras", "I got this week's satellite images of the hotspots. Compare them with the land permit map.", null, {vo:"b4_laras1", folder:"laras"});
-  await runForum(data.slice(2), F);
-  await chapterEnd(4, {
-    sebut:["Young Representative Names the Land Burners", "That night your name is the headline. In a meeting room somewhere, the Round Table decides to hit back."],
-    tinggi:["In the Smoke, One Voice Refuses to Blame the Farmers", "People heard you. But the name of the land burner is still tucked away in the Round Table's drawer."],
-    sedang:["The Smoke Lingers, the Answers Stay Vague", "The public is still waiting to see if you have the nerve."],
-    rendah:["A Haze of Smoke, a Haze of Promises", "People are getting tired of hearing safe sentences."]
-  }, "Smear", S.flags.sebut ? "sebut" : null);
 }
 
 // ---------------------------------------------------------------------
@@ -493,17 +401,6 @@ function bab5Data(){
         {t:"For the common good, I'm willing to step aside for now.", vo:"b5_q2_sb", d:-4, safe:true, r:"It sounds mature, but the buzzers call it an admission of guilt."},
         {t:"Mr. Darsono should be investigated too, over the rice imports.", vo:"b5_q2_sc", d:+4, e:+15, r:"You hit back. The Round Table now sees you as a real threat."}
       ]},
-    { who:"@infoterkini.id", hot:true, q:"BREAKING: your family turns out to own an illegal mine in East Sendaru!", vo:"b5_q3",
-      opts:[
-        {t:"That's a hoax. Here are my family's assets, check them yourself.", vo:"b5_q3_a", d:+10, r:"Open data takes the wind out of the hoax."},
-        {t:"My family has nothing to do with politics.", vo:"b5_q3_b", d:-2, r:"True, but without a clear denial, the hoax keeps spreading."},
-        {t:"I'll put every single one of these hoax spreaders in jail!", vo:"b5_q3_c", d:-6, r:"The threat becomes a joke: the representative who can't take criticism."}
-      ],
-      sulit:[
-        {t:"Here's my family's asset report. Anyone can look through it.", vo:"b5_q3_sa", d:+10, r:"Open data takes the wind out of the hoax."},
-        {t:"Please leave my family out of politics.", vo:"b5_q3_sb", d:0, r:"A very human request, but the hoax keeps going around."},
-        {t:"I've reported the accounts spreading this hoax to the cyber police.", vo:"b5_q3_sc", d:+2, r:"A legitimate step, but users say you're silencing criticism."}
-      ]},
     { who:"@ibu_muara", q:"I'm from Muara. You stood with us by the river that night. I still want to believe you. Please just tell the truth.", vo:"b5_q4",
       opts:[
         {t:"Thank you for believing in me. I never took that money, and it will come out.", vo:"b5_q4_a", d:+10, r:"The people of Muara share your reply. They still remember that night of the flood."},
@@ -527,33 +424,6 @@ function bab5Data(){
         {t:"Those buzzers were paid by the Round Table, and I'll prove it.", vo:"b5_q5_sc", d:+3, e:+15, promise:"bukti_pendengung", r:"A huge accusation. Now you have to prove it."}
       ]}
   ];
-}
-async function bab5(){
-  chapterStart(5, "Smear", "kamar", "feedOn hot", "fitnah");
-  await card({ vo:"bab5_buka", voFrom:2, mark:5, btn:"Face the Comment Section", parts:[
-    {tag:"h2", text:"Chapter 5"}, {tag:"h1", text:"Smear"},
-    {tag:"p", cls:"story", text:"At two in the morning, a video starts going around: you, in a parking lot, taking a thick envelope. Within an hour, #FakeRepresentative is the top trending topic."}],
-    after: brief("New Mechanic", "Typos Become Twisted Headlines", "Comments come faster and you have less time. From this chapter on, a sentence with typos can be cut up and turned into a headline that brings you down.",
-      [S.relaxed ? "No time limit" : "Tighter time limits", "Check every letter", "Hoaxes spread fast"]) });
-  await say("Narrator", "Your phone won't stop buzzing. Thousands of new accounts with blank profile pictures swarm your comments.", null, {vo:"b5_n1"});
-  feedNoise(NOISE, true);
-  S.rec = true;
-  const F = {...FORUMS.sosmed2, who:"Netizens", folder:"warga", hero:"heroK", prompt:"Reply before the hoax spreads",
-    timeout:{line:"You replied too late. The clip has already been shared a hundred thousand times.", d:-8}};
-  const data = bab5Data();
-  await runForum(data.slice(0, 3), F);
-  await say("Nadia · Private Message", "I'm checking that video. Something's off with the shadows. Don't say anything careless yet.", null, {vo:"b5_nadia1", folder:"nadia"});
-  await runForum(data.slice(3, 4), F);
-  await say("Nadia · Private Message", "Confirmed. The video was edited: your shadow falls to the left, but the shadow of the car next to you falls to the right. I've got the original footage.", null, {vo:"b5_nadia2", folder:"nadia"});
-  S.ev.add("video");
-  feedNoise(null, false);
-  addPost("@nadia.prameswari", "The original footage from that parking lot. No envelope. Compare them yourself.");
-  await runForum(data.slice(4), F);
-  await chapterEnd(5, {
-    tinggi:["Smear Video Exposed, Support Grows Stronger", "Nadia's original footage spreads faster than the smear. The Round Table is getting nervous."],
-    sedang:["Video Proven Fake, but Doubts Remain", "Some people already believed the first clip."],
-    rendah:["Smear Debunked, but the Name Is Already Stained", "Your messy sentences became a joke too."]
-  }, "National Debate");
 }
 
 // ---------------------------------------------------------------------
@@ -637,10 +507,10 @@ function bab6Data(){
       ]}
   ];
 }
-async function bab6(){
-  chapterStart(6, "National Debate", "tv", "", "debat");
-  await card({ vo:"bab6_buka", voFrom:2, mark:6, btn:"Enter the Studio", parts:[
-    {tag:"h2", text:"Chapter 6"}, {tag:"h1", text:"National Debate"},
+async function bab4(){
+  chapterStart(4, "National Debate", "tv", "", "debat");
+  await card({ vo:"bab6_buka", voFrom:2, mark:4, btn:"Enter the Studio", parts:[
+    {tag:"h2", text:"Chapter 4"}, {tag:"h1", text:"National Debate"},
     {tag:"p", cls:"story", text:"The house is quietly discussing a revision that would weaken the Anti-Corruption Agency. Off Sendaru's north coast, a 30 kilometer bamboo fence appears, complete with land certificates. You're invited to a national debate."}],
     after: brief("New Forum", "TV Debate", "Your opponent will cut you off if you take too long. Evidence from earlier chapters unlocks a fourth answer, the strongest one.",
       ["New mechanic: answers from evidence", `Evidence collected: ${S.ev.size}`, S.relaxed ? "No time limit" : "Cut off if you're late"]) });
@@ -654,11 +524,11 @@ async function bab6(){
   await say("Rina · Moderator", "Good evening, Sendaru. Tonight we're discussing the revision of the Anti-Corruption Agency Law. Answer time is limited.", $("rina"), {vo:"b6_rina0", folder:"moderator"});
   await runForum(data.slice(1), F);
   await say("Narrator", "That same night, thousands of students gather in front of the house.", null, {vo:"b6_n1"});
-  await chapterEnd(6, {
+  await chapterEnd(4, {
     tinggi:["Last Night's Debate Sparks a Wave of Student Protests", "Thousands of students take to the streets against the revision. In his office, Mr. Darsono starts to panic."],
     sedang:["Heated Debate, Revision Still on the Table", "Some viewers take your side. Students are starting to gather, though not many yet."],
     rendah:["Coalition Spokesperson Wins the Debate", "Hendra won on TV. But a few students still wrote down what you said."]
-  }, "Open Session");
+  }, "Open Session", null, "bab6");
 }
 
 // ---------------------------------------------------------------------
@@ -737,10 +607,10 @@ function bab7Pers(){
       {t:"If they remove me, the people will take to the streets.", vo:"b7_q5_sc", d:+2, e:+8, r:"The line gets clipped and called a threat to incite the masses."}
     ]};
 }
-async function bab7(){
-  chapterStart(7, "Open Session", "sidang", "", "sidang");
-  await card({ vo:"bab7_buka", voFrom:2, mark:7, btn:"Enter the Chamber", parts:[
-    {tag:"h2", text:"Chapter 7"}, {tag:"h1", text:"Open Session"},
+async function bab5(){
+  chapterStart(5, "Open Session", "sidang", "", "sidang");
+  await card({ vo:"bab7_buka", voFrom:2, mark:5, btn:"Enter the Chamber", parts:[
+    {tag:"h2", text:"Chapter 5"}, {tag:"h1", text:"Open Session"},
     {tag:"p", cls:"story", text:"A plenary session. Every piece of evidence you've gathered is in one folder: the levee, the social aid, the rice imports, the land fires, and the sea fence. Today you read it out in front of the whole house."}],
     after: brief("New Forum", "House Session", "The sentences are long and every word goes on the record. Other members will jeer and interrupt. The evidence you've gathered unlocks the strongest answers.",
       ["Longer sentences", `Evidence collected: ${S.ev.size}`, S.relaxed ? "No time limit" : "Cut off if you're late"]) });
@@ -768,11 +638,11 @@ async function bab7(){
   gavel(2);
   await say("Chair of the Session", "The leadership accepts a motion from the coalition faction: impeachment of the member for fabricating evidence. The session is adjourned.", $("ketua"), {vo:"b7_ketua_mosi", folder:"ketua"});
   await runForum([bab7Pers()], {...F, timeout:undefined});
-  await chapterEnd(7, {
+  await chapterEnd(5, {
     tinggi:["Evidence Read Out, Young Representative Impeached Anyway", "The public is furious. Tonight, thousands gather outside the house."],
     sedang:["Impeachment Motion Filed, Public Divided", "Some believe your evidence, others believe it was fabricated."],
     rendah:["Accused of Fabricating Evidence, Young Representative Cornered", "Only a few defend you. By tomorrow morning, an arrest warrant will be issued."]
-  }, "The Last Voice");
+  }, "The Last Voice", null, "bab7");
 }
 
 // ---------------------------------------------------------------------
@@ -872,10 +742,10 @@ const B8_PENUTUP = { who:"Nadia · Reporter", node:"nadiaSi", folder:"nadia", pr
     {t:"I have to go now. I'm leaving this country in your hands.", vo:"b8_akhir_sb", d:+5, r:"A warm goodbye. Many people cry in front of their screens."},
     {t:"Don't trust anyone, including me. Trust only the evidence.", vo:"b8_akhir_sc", d:+6, r:"A strange thing to say goodbye with, but the students paint it on their banners."}
   ]};
-async function bab8(){
-  chapterStart(8, "The Last Voice", "siaran", "", "siaran");
-  await card({ vo:"bab8_buka", voFrom:2, mark:8, btn:"Turn On the Camera", parts:[
-    {tag:"h2", text:"Chapter 8"}, {tag:"h1", text:"The Last Voice"},
+async function bab6(){
+  chapterStart(6, "The Last Voice", "siaran", "", "siaran");
+  await card({ vo:"bab8_buka", voFrom:2, mark:6, btn:"Turn On the Camera", parts:[
+    {tag:"h2", text:"Chapter 6"}, {tag:"h1", text:"The Last Voice"},
     {tag:"p", cls:"story", text:"Your arrest warrant comes out tomorrow morning. Tonight, Nadia has managed to get one live national broadcast. Outside, thousands of people are waiting to hear your voice."}],
     after: brief("Final Chapter", "National Live Broadcast", "Every forum comes together in one night: a speech, the comment section, calls from the public, and one call you never saw coming. Your old promises will be collected on.",
       ["The speech must be exact", "Promises will be collected", "Every word decides the ending"]) });
@@ -903,12 +773,12 @@ async function bab8(){
   }
   if (S.sold){
     await say("Narrator", "The broadcast cuts out. Screens all over Sendaru go black.", null, {vo:"b8_n_putus"});
-    S.done.add(8);
+    S.done.add(6);
     return;
   }
   await runForum([B8_PENUTUP], F);
   S.rec = false;
-  S.done.add(8);
+  S.done.add(6);
 }
 
 // ---------------------------------------------------------------------
@@ -988,13 +858,13 @@ function bab9Putusan(){
       {t:"I accept, and I am ready to adjust to the direction of the house.", vo:"b9_q6_sc", d:-4, safe:true, flag:"vp_pasrah", r:"The Chair bangs the gavel. The coalition benches trade smiles."}
     ]};
 }
-async function bab9(){
+async function bab7(){
   // only the best path reaches this chapter; every other path ends after the broadcast
   if (endingKey() !== "fajar") return;
-  chapterStart(9, "The Second Voice", "sidang", "", "sidang");
+  chapterStart(7, "The Second Voice", "sidang", "", "sidang");
   $("darsonoS").style.visibility = "hidden"; // he is in custody on this path
-  await card({ vo:"bab9_buka", voFrom:2, mark:9, btn:"Enter the Chamber", parts:[
-    {tag:"h2", text:"Chapter 9"}, {tag:"h1", text:"The Second Voice"},
+  await card({ vo:"bab9_buka", voFrom:2, mark:7, btn:"Enter the Chamber", parts:[
+    {tag:"h2", text:"Chapter 7"}, {tag:"h1", text:"The Second Voice"},
     {tag:"p", cls:"story", text:"Three months after the broadcast, your arrest warrant is canceled and Mr. Darsono is in custody. This morning, the Vice President of Sendaru resigned after his name turned up in the Round Table files. The house has to choose a replacement, and one name keeps coming up on the streets: yours."}],
     after: brief("Bonus Chapter", "Public Hearing for Vice President", "The house tests you on camera. Every side offers its support, and every bit of support has a price. Soft answers make your path smoother, but they decide what kind of seat you end up with.",
       ["Longer sentences", "Support has a price", "The final decision is yours"], false) });
@@ -1078,4 +948,4 @@ async function ending(){
   location.reload();
 }
 
-const CHAPTERS = [bab1, bab2, bab3, bab4, bab5, bab6, bab7, bab8, bab9];
+const CHAPTERS = [bab1, bab2, bab3, bab4, bab5, bab6, bab7];

@@ -1,5 +1,5 @@
 // =====================================================================
-// SUARA TERAKHIR: isi cerita (Prolog sampai Bab 9)
+// SUARA TERAKHIR: isi cerita (Prolog sampai Bab 7). Fungsi data bab2Data..bab9Data memakai nomor bab LAMA; urutan bab sekarang ada di CHAPTERS.
 // Bahasa baku sesuai KBBI/PUEBI. Semua tokoh, tempat, dan perusahaan rekaan.
 //
 // Placeholder: {P} = Bapak/Ibu, {p} = Pak/Bu, {N} = nama depan pemain.
@@ -17,45 +17,33 @@ const EVIDENCE = {
   sertifikat: { tag:"Sertifikat laut", text:"Sebanyak 263 sertifikat tanah di atas laut." }
 };
 
-// Janji yang belum bisa ditepati. Rakyat menagihnya di Bab 8.
+// Janji yang belum bisa ditepati. Rakyat menagihnya di Bab 6.
 const PROMISES = {
   tanggul_sebulan:  "membangun tanggul dalam satu bulan",
   nama_kayu:        "menyebut nama pemilik kayu besok",
   penjara_sawit:    "memenjarakan perusahaan sawit",
   rumah_warga:      "mengganti semua rumah warga",
   bansos_besok:     "semua bantuan sampai ke posko besok pagi",
-  uang_tunai:       "memberi uang tunai kepada setiap keluarga di posko",
-  cair_12jam:       "mencairkan bantuan dalam dua belas jam",
-  cair_minggu_ini:  "mencairkan bantuan minggu ini",
-  beras_turun:      "harga beras turun bulan depan",
   beras_murah:      "harga beras lebih murah daripada janji Bram",
   politik_bersih:   "membersihkan politik dalam lima tahun",
-  biaya_anak:       "membiayai pengobatan semua anak yang sakit",
-  langit_biru:      "langit biru lagi minggu depan",
   bukti_pendengung: "membuktikan siapa yang membayar para pendengung",
   mundur:           "mundur dari dewan jika revisi disahkan",
   rev_gagal:        "menggagalkan revisi undang-undang"
 };
-// Kalimat penelepon yang menagih setiap janji (Bab 8). VO: b8_tagih_<id>_l / _p
+// Kalimat penelepon yang menagih setiap janji (Bab 6). VO: b8_tagih_<id>_l / _p
 const TAGIH = {
   tanggul_sebulan:  "{P} dulu berjanji tanggul berdiri dalam satu bulan. Sudah berbulan-bulan, yang ada hanya papan proyek.",
   nama_kayu:        "{P} dulu berjanji menyebut nama pemilik kayu gelondongan keesokan harinya. Kami masih menunggu sampai sekarang.",
   penjara_sawit:    "{P} pernah berjanji memenjarakan perusahaan sawit keesokan harinya. Mengapa mereka masih bebas?",
   rumah_warga:      "{P} berjanji semua rumah kami yang rusak akan diganti. Sampai hari ini, kami masih tinggal di tenda.",
   bansos_besok:     "{P} berjanji semua bantuan sampai ke posko keesokan paginya. Kami menunggu berhari-hari.",
-  uang_tunai:       "{P} berjanji memberi uang tunai kepada setiap keluarga di posko. Uang itu tidak pernah datang.",
-  cair_12jam:       "{P} berjanji bantuan cair dalam dua belas jam. Kenyataannya, kami menunggu dua minggu lagi.",
-  cair_minggu_ini:  "{P} berjanji bantuan cair minggu itu juga. Kenyataannya, kami menunggu sebulan.",
-  beras_turun:      "{P} berjanji harga beras turun bulan depan. Sekarang harganya justru naik lagi.",
   beras_murah:      "{P} berjanji harga beras lebih murah daripada janji Bram. Di pasar, harganya tidak berubah.",
   politik_bersih:   "{P} berjanji membersihkan politik dalam lima tahun. Malam ini justru {P} yang akan ditangkap.",
-  biaya_anak:       "{P} berjanji membiayai pengobatan anak-anak yang sakit karena asap. Tagihan rumah sakit anak saya belum lunas.",
-  langit_biru:      "{P} berjanji langit kami biru lagi dalam seminggu. Asapnya baru hilang dua bulan kemudian.",
   bukti_pendengung: "{P} berjanji membuktikan siapa yang membayar para pendengung. Mana buktinya?",
   mundur:           "{P} berjanji mundur jika revisi itu disahkan. Revisinya disahkan minggu lalu, tetapi {P} masih duduk di dewan.",
   rev_gagal:        "{P} berjanji revisi itu tidak akan lolos. Minggu lalu, revisinya disahkan."
 };
-const SAFE_OFFER = 10; // jawaban aman sebanyak ini membuat Pak Darsono menawarkan kursi (akhir tersembunyi)
+const SAFE_OFFER = 7; // jawaban aman sebanyak ini membuat Pak Darsono menawarkan kursi (akhir tersembunyi)
 
 // ---------------------------------------------------------------------
 // PROLOG
@@ -164,11 +152,101 @@ async function bab1(){
       ["Awali dengan huruf kapital", "Perhatikan tanda baca", S.relaxed ? "Tanpa batas waktu" : "Ada batas waktu"]) });
   S.rec = true; // record typing stats for this chapter
   await runForum(bab1Data(), {...FORUMS.cegat, who:"Nadia · Wartawan", node:"nadia", folder:"nadia", hero:"heroF", prompt:"Jawab pertanyaan Nadia"});
+  await say("Nadia · Wartawan", "Nomor di kayu itu cocok dengan izin tebang PT Cakrawala Sawit Sendaru. Saya akan mencari tahu siapa pemiliknya.", null, {vo:"b1_nadia_kayu", folder:"nadia"});
   await chapterEnd(1, {
     tinggi:["Satu-satunya Pejabat yang Turun ke Air", "Artikel Nadia dibaca jutaan orang. Namamu mulai dikenal, tetapi juga mulai dicatat oleh Meja Bundar."],
     sedang:["Wakil Rakyat Baru: Harapan atau Basa-basi?", "Publik masih ragu. Kesempatanmu belum habis."],
     rendah:["Sama Saja dengan yang Lain", "Warga kecewa. Kepercayaan yang hilang akan sulit kembali."]
-  }, "Bantuan Sosial yang Hilang");
+  }, "Bantuan dan Harga");
+}
+
+// ---------------------------------------------------------------------
+// BAB 2: BANTUAN DAN HARGA (posko + Kolom Komentar, lalu siniar; meter baru: Tekanan Elit dan Janji Tertunda)
+// ---------------------------------------------------------------------
+async function bab2(){
+  chapterStart(2, "Bantuan dan Harga", "posko", "feedOn", "posko");
+  await card({ vo:"bab2_buka", voFrom:2, mark:2, btn:"Buka Kolom Komentar", parts:[
+    {tag:"h2", text:"Bab 2"}, {tag:"h1", text:"Bantuan dan Harga"},
+    {tag:"p", cls:"story", text:"Dua minggu setelah banjir, bantuan sosial belum juga sampai, dan harga beras naik tiga kali dalam sebulan. Di posko, warga mengantre dengan piring kosong, sementara namamu mulai ramai dibicarakan di media sosial."}],
+    after: brief("Forum Baru", "Kolom Komentar", "Komentar warga muncul satu per satu di ponselmu. Balas dengan mengetik salah satu jawaban. Setiap balasan dibaca ribuan orang.",
+      ["Meter baru: Tekanan Elit", "Meter baru: Janji Tertunda", S.relaxed ? "Tanpa batas waktu" : "Waktu tetap longgar"]) });
+  await say("Narator", "Ponselmu bergetar. Video wawancaramu di tepi sungai sudah ditonton dua juta kali.", null, {vo:"b2_n1"});
+  S.rec = true;
+  const F = {...FORUMS.sosmed, who:"Warganet", folder:"warga", hero:"heroPk", prompt:"Balas komentar ini",
+    timeout:{line:"Komentar itu tenggelam tanpa jawaban. Diammu dianggap sebagai jawaban.", d:-6}};
+  const data = bab2Data();
+  await runForum(data.slice(0, 2), F);
+  await say("Narator", "Sebuah pesan masuk dari nomor yang tidak dikenal. Pengirimnya mengaku bernama Laras, pegawai Kementerian Sosial.", null, {vo:"b2_n2"});
+  await say("Bu Laras", "Saya tidak bisa bicara lama. Saya kirimkan satu dokumen. Baca baik-baik, lalu tandai bagian yang paling penting.", null, {vo:"b2_laras1", folder:"laras"});
+  await runForum(data.slice(2), F);
+  await say("Narator", "Tiga hari kemudian, Menteri Sosial dicopot. Bantuan cair sebagian, tetapi tidak ada satu pun anggota Meja Bundar yang tersentuh.", null, {vo:"b2_n3"});
+  await say("Bu Laras", "Satu lagi. Izin impor beras tahun ini hanya dipegang satu perusahaan. Komisarisnya Haryo Darsono, adik kandung Pak Darsono.", null, {vo:"b2_laras2", folder:"laras"});
+  S.ev.add("impor");
+  // second backdrop: the podcast studio
+  await switchScene("pod", "", "siniar");
+  await card({ vo:"bab3_buka", voFrom:2, btn:"Masuk ke Studio", parts:[
+    {tag:"h2", text:"Beberapa Hari Kemudian"}, {tag:"h1", text:"Ngobrol Jujur"},
+    {tag:"p", cls:"story", text:"Minyak goreng menghilang dari pasar. Sebuah siniar populer, Ngobrol Jujur, mengundangmu untuk bicara."}],
+    after: brief("Forum Baru", "Siniar Ngobrol Jujur", "Obrolannya panjang dan santai. Waktumu lebih longgar, tetapi ketelitian lebih penting: kalimat yang berantakan terdengar tidak meyakinkan.",
+      ["Ketelitian lebih penting daripada kecepatan", "Hati-hati dengan janji"]) });
+  berita(["Izin impor beras tunggal dipegang PT Bundar Pangan Sejahtera, komisaris Haryo Darsono", "Harga beras naik tiga kali dalam sebulan", "Minyak goreng menghilang dari pasar di Sendaru"]);
+  await say("Dimas · Ngobrol Jujur", "Selamat datang di Ngobrol Jujur. Hari ini kita kedatangan wakil rakyat yang videonya sedang ramai. Santai saja, ya. Di sini kita bicara jujur.", $("dimas"), {vo:"b3_dimas0", folder:"dimas"});
+  const P = {...FORUMS.siniar, who:"Dimas · Ngobrol Jujur", node:"dimas", folder:"dimas", hero:"heroPod", prompt:"Jawab pertanyaan Dimas",
+    timeout:{line:"Hening terlalu lama. Dimas tertawa canggung dan mengganti topik.", d:-6}};
+  const pod = bab3Data();
+  await runForum(pod.slice(0, 1), P);
+  await say("Narator", "Di siniar lain, Bram Satria berjanji harga beras akan menjadi lima ribu rupiah per kilogram. Klipnya ditonton sepuluh juta kali.", null, {vo:"b3_n1"});
+  await say("Bram Satria", "Beras lima ribu! Itu janji saya. Rakyat tidak butuh hitungan, rakyat butuh keberanian!", null, {vo:"b3_bram1", folder:"bram"});
+  await runForum(pod.slice(1), P);
+  await chapterEnd(2, {
+    tinggi:["Menolak Janji Manis, Wakil Rakyat Muda Justru Didengar", "Klipmu dibagikan dengan satu kalimat sederhana: ternyata jujur itu menarik."],
+    sedang:["Beras Lima Ribu atau Jujur Apa Adanya? Publik Terbelah", "Sebagian pendengar memujimu, sebagian lagi lebih percaya pada janji Bram."],
+    rendah:["Bram Satria Melesat, Wakil Rakyat Muda Tertinggal", "Janji manis menyebar lebih cepat daripada penjelasan yang jujur."]
+  }, "Asap dan Fitnah", null, "bab3");
+}
+
+// ---------------------------------------------------------------------
+// BAB 3: ASAP DAN FITNAH (lokasi kebakaran + Wawancara Cegat, lalu Kolom Komentar versi cepat; mekanik baru: salah ketik jadi plintiran)
+// ---------------------------------------------------------------------
+async function bab3(){
+  chapterStart(3, "Asap dan Fitnah", "asap", "", "asap");
+  await card({ vo:"bab4_buka", voFrom:2, mark:3, btn:"Turun ke Lokasi", parts:[
+    {tag:"h2", text:"Bab 3"}, {tag:"h1", text:"Asap dan Fitnah"},
+    {tag:"p", cls:"story", text:"Kemarau panjang. Langit Sendaru Barat berubah kuning, sekolah diliburkan, dan rumah sakit penuh pasien sesak napas. Para pejabat menyebutnya kemarau biasa."}],
+    after: brief("Forum", "Wawancara Cegat di Lokasi Kebakaran", "Di sini tidak ada jawaban yang benar-benar salah. Setiap jawaban punya harga.",
+      ["Pilihan lebih bernuansa", "Tekanan Elit makin menentukan", S.relaxed ? "Tanpa batas waktu" : "Ada batas waktu"], false) });
+  berita(["Titik api: 287 dari 312 berada di konsesi PT Cakrawala Sawit Sendaru", "Kabut asap meliburkan 40 sekolah di Sendaru Barat", "Puskesmas penuh pasien sesak napas", "Bupati: investor sawit menghidupi daerah"]);
+  await say("Nadia · Wartawan", "Kita bertemu lagi. Kali ini airnya diganti asap.", $("nadiaA"), {vo:"b4_nadia0", folder:"nadia"});
+  await say("Bu Laras", "Citra satelit titik api minggu ini: 287 dari 312 titik berada di konsesi PT Cakrawala Sawit Sendaru. Pemilik sahamnya anggota Meja Bundar.", null, {vo:"b4_laras2", folder:"laras"});
+  S.ev.add("satelit");
+  S.rec = true;
+  const F = {...FORUMS.cegat, who:"Nadia · Wartawan", node:"nadiaA", folder:"nadia", hero:"heroA", prompt:"Jawab pertanyaan ini"};
+  await runForum(bab4Data(), F);
+  // second backdrop: the smear night
+  await switchScene("kamar", "feedOn hot", "fitnah");
+  await card({ vo:"bab5_buka", voFrom:2, btn:"Hadapi Kolom Komentar", parts:[
+    {tag:"h2", text:"Dini Hari"}, {tag:"h1", text:"Fitnah"},
+    {tag:"p", cls:"story", text:"Dua hari kemudian, pukul dua dini hari, sebuah video beredar: kamu terlihat menerima amplop tebal di sebuah parkiran. Dalam satu jam, tagar #WakilRakyatPalsu menduduki puncak percakapan."}],
+    after: brief("Mekanik Baru", "Salah Ketik Jadi Plintiran", "Komentar datang lebih cepat dan waktumu lebih sempit. Mulai sekarang, kalimat yang salah ketik bisa dipotong dan dijadikan judul berita yang menjatuhkanmu.",
+      [S.relaxed ? "Tanpa batas waktu" : "Waktu lebih ketat", "Teliti setiap huruf", "Hoaks menyebar cepat"]) });
+  await say("Narator", "Ponselmu tidak berhenti bergetar. Ribuan akun baru dengan foto profil kosong menyerbu kolom komentarmu.", null, {vo:"b5_n1"});
+  feedNoise(NOISE, true);
+  const K = {...FORUMS.sosmed2, who:"Warganet", folder:"warga", hero:"heroK", prompt:"Balas sebelum hoaksnya menyebar",
+    timeout:{line:"Kamu terlambat membalas. Potongan video itu sudah dibagikan seratus ribu kali.", d:-8}};
+  const data = bab5Data();
+  await runForum(data.slice(0, 2), K);
+  await say("Nadia · Pesan Pribadi", "Saya sedang memeriksa video itu. Ada yang aneh dengan bayangannya. Jangan bicara sembarangan dulu.", null, {vo:"b5_nadia1", folder:"nadia"});
+  await runForum(data.slice(2, 3), K);
+  await say("Nadia · Pesan Pribadi", "Sudah saya pastikan. Video itu hasil sunting: bayanganmu jatuh ke kiri, tetapi bayangan mobil di sebelahmu jatuh ke kanan. Rekaman aslinya sudah saya dapatkan.", null, {vo:"b5_nadia2", folder:"nadia"});
+  S.ev.add("video");
+  feedNoise(null, false);
+  addPost("@nadia.prameswari", "Rekaman asli dari parkiran itu. Tidak ada amplop. Silakan bandingkan sendiri.");
+  await runForum(data.slice(3), K);
+  await chapterEnd(3, {
+    tinggi:["Video Fitnah Terbongkar, Dukungan Justru Menguat", "Rekaman asli dari Nadia menyebar lebih cepat daripada fitnahnya. Meja Bundar mulai cemas."],
+    sedang:["Video Terbukti Palsu, tetapi Keraguan Tersisa", "Sebagian warga sudah telanjur percaya pada potongan pertama."],
+    rendah:["Fitnah Terbantah, Nama Telanjur Tercoreng", "Kalimat-kalimatmu yang berantakan ikut dijadikan bahan olok-olok."]
+  }, "Debat Nasional", null, "bab5");
 }
 
 // ---------------------------------------------------------------------
@@ -198,17 +276,6 @@ function bab2Data(){
         {t:"Mungkin data pusat dan daerah belum cocok.", vo:"b2_q2_sb", d:-2, safe:true, r:"Terdengar masuk akal, tetapi juga terdengar seperti mencari alasan untuk kementerian."},
         {t:"Kalau angkanya benar, tunjukkan daftar penerimanya hari ini.", vo:"b2_q2_sc", d:+6, e:+12, r:"Tantangan yang tajam. Kementerian tidak menjawab, tetapi mereka mendengarnya."}
       ]},
-    { who:"@infoviral_88", q:"Katanya bantuan tidak dibagikan karena warga di sini bukan pendukung partai penguasa. Benar begitu?", vo:"b2_q3",
-      opts:[
-        {t:"Saya belum pegang buktinya. Kita tunggu datanya jelas dulu.", vo:"b2_q3_a", d:+8, r:"Beberapa warganet memuji sikapmu yang tidak ikut menyebarkan kabar burung."},
-        {t:"Benar sekali, ini jelas permainan politik!", vo:"b2_q3_b", d:-8, e:+10, r:"Kabar itu ternyata hoaks. Kini kamu dituduh ikut menyebarkannya."},
-        {t:"Itu hoaks. Penyebarnya saya laporkan ke polisi.", vo:"b2_q3_c", d:-6, r:"Ancamanmu membuat orang takut bertanya. Kolom komentar mendadak sepi."}
-      ],
-      sulit:[
-        {t:"Buktinya belum saya lihat, jadi saya tidak mau menebak-nebak.", vo:"b2_q3_sa", d:+8, r:"Beberapa warganet memuji sikapmu yang tidak ikut menyebarkan kabar burung."},
-        {t:"Bisa jadi. Pola seperti ini sudah pernah terjadi.", vo:"b2_q3_sb", d:-6, e:+8, r:"Kalimatmu dijadikan pembenaran oleh penyebar hoaks."},
-        {t:"Tidak mungkin, pemerintah tidak akan sejahat itu.", vo:"b2_q3_sc", d:-4, safe:true, r:"Warga yang sudah dua minggu kelaparan tidak percaya pada pembelaan itu."}
-      ]},
     { who:"Dokumen dari Bu Laras", q:"Laporan Penyaluran Bantuan Sosial, Kecamatan Muara Hilir. Bagian mana yang paling penting?", silent:true, noTimer:true, feed:false, node:null,
       prompt:"Tandai bagian terpenting dari dokumen", hint:"Ketik baris yang menurutmu paling penting, lalu tekan Enter.",
       opts:[
@@ -221,52 +288,7 @@ function bab2Data(){
         {t:"Rekanan penyalur: PT Bundar Logistik Sendaru.", d:+2, r:"Nama rekanan itu penting, tetapi tanpa bukti penyimpangan, nama saja belum cukup."},
         {t:"Anggaran penyaluran naik dua kali lipat dibanding tahun lalu.", d:+2, r:"Mencurigakan, tetapi kenaikan anggaran bisa saja punya alasan."}
       ]},
-    { who:"@pak_rt_muara", q:"Saya ketua RT di sini. Kalau {P} memang peduli, apa yang bisa {P} bantu sekarang, bukan nanti?", vo:"b2_q4",
-      opts:[
-        {t:"Hari ini saya belikan beras untuk posko ini, pakai uang saya sendiri.", vo:"b2_q4_a", d:+8, r:"Foto karung beras di posko beredar. Bantuan kecil, tetapi nyata."},
-        {t:"Tahun depan saya usulkan anggaran tambahan.", vo:"b2_q4_b", d:-6, safe:true, r:`"Tahun depan?" balas ketua RT itu. "Kami butuh makan hari ini."`},
-        {t:"Saya juga korban sistem, jadi saya tidak bisa berbuat banyak.", vo:"b2_q4_c", d:-10, r:"Warganet menyebut balasanmu sebagai alasan paling malas minggu ini."}
-      ],
-      sulit:[
-        {t:"Sore ini saya antar beras dan obat ke posko, lalu ikut membagikannya sendiri.", vo:"b2_q4_sa", d:+8, r:"Foto karung beras di posko beredar. Bantuan kecil, tetapi nyata."},
-        {t:"Beberapa donatur sudah saya hubungi. Semoga cepat ada kabar.", vo:"b2_q4_sb", d:+2, r:"Baik, tetapi kata semoga tidak bisa dimakan."},
-        {t:"Mulai besok, setiap keluarga di posko akan saya beri uang tunai.", vo:"b2_q4_sc", d:+2, promise:"uang_tunai", r:"Komentarmu dibanjiri ucapan terima kasih. Namun, dari mana uangnya?"}
-      ]},
-    { who:"@bramsatria", q:"Kalau saya yang jadi wakil rakyat, bantuan sosial cair dalam dua puluh empat jam. Rakyat butuh aksi, bukan audit.", vo:"b2_q5", folder:"bram",
-      opts:[
-        {t:"Bantuan cepat itu bagus. Lebih bagus lagi kalau bantuannya tidak dicuri di jalan.", vo:"b2_q5_a", d:+10, r:"Balasanmu dikutip ribuan kali. Bram tidak membalas lagi."},
-        {t:"Silakan buktikan, kalau Anda bisa.", vo:"b2_q5_b", d:-3, r:"Pertengkaran kecil itu menjadi tontonan, bukan solusi."},
-        {t:"Saya juga bisa mencairkannya dalam dua belas jam!", vo:"b2_q5_c", d:+2, promise:"cair_12jam", r:"Kini ada dua janji yang saling berlomba. Rakyat akan menagih keduanya."}
-      ],
-      sulit:[
-        {t:"Justru dengan audit, bantuan berikutnya sampai ke orang yang tepat.", vo:"b2_q5_sa", d:+10, r:"Balasanmu dikutip ribuan kali. Bram tidak membalas lagi."},
-        {t:"Sudahlah, kita kerja sama saja. Rakyat tidak butuh kita bertengkar.", vo:"b2_q5_sb", d:+3, safe:true, r:"Kalimat yang sejuk, tetapi Bram justru memakainya untuk berfoto bersama warga."},
-        {t:"Saya setuju. Minggu ini bantuannya pasti cair.", vo:"b2_q5_sc", d:+3, promise:"cair_minggu_ini", r:"Warga senang membacanya. Namun, minggu ini tinggal empat hari lagi."}
-      ]}
   ];
-}
-async function bab2(){
-  chapterStart(2, "Bantuan Sosial yang Hilang", "posko", "feedOn", "posko");
-  await card({ vo:"bab2_buka", voFrom:2, mark:2, btn:"Buka Kolom Komentar", parts:[
-    {tag:"h2", text:"Bab 2"}, {tag:"h1", text:"Bantuan Sosial yang Hilang"},
-    {tag:"p", cls:"story", text:"Dua minggu setelah banjir, bantuan sosial belum juga sampai. Di posko, warga mengantre dengan piring kosong, sementara namamu mulai ramai dibicarakan di media sosial."}],
-    after: brief("Forum Baru", "Kolom Komentar", "Komentar warga muncul satu per satu di ponselmu. Balas dengan mengetik salah satu jawaban. Setiap balasan dibaca ribuan orang.",
-      ["Meter baru: Tekanan Elit", "Menyerang pejabat menaikkan Tekanan Elit", S.relaxed ? "Tanpa batas waktu" : "Waktu tetap longgar"]) });
-  await say("Narator", "Ponselmu bergetar. Video wawancaramu di tepi sungai sudah ditonton dua juta kali.", null, {vo:"b2_n1"});
-  S.rec = true;
-  const F = {...FORUMS.sosmed, who:"Warganet", folder:"warga", hero:"heroPk", prompt:"Balas komentar ini",
-    timeout:{line:"Komentar itu tenggelam tanpa jawaban. Diammu dianggap sebagai jawaban.", d:-6}};
-  const data = bab2Data();
-  await runForum(data.slice(0, 3), F);
-  await say("Narator", "Sebuah pesan masuk dari nomor yang tidak dikenal. Pengirimnya mengaku bernama Laras, pegawai Kementerian Sosial.", null, {vo:"b2_n2"});
-  await say("Bu Laras", "Saya tidak bisa bicara lama. Saya kirimkan satu dokumen. Baca baik-baik, lalu tandai bagian yang paling penting.", null, {vo:"b2_laras1", folder:"laras"});
-  await runForum(data.slice(3), F);
-  await say("Narator", "Tiga hari kemudian, Menteri Sosial dicopot. Bantuan cair sebagian, tetapi tidak ada satu pun anggota Meja Bundar yang tersentuh.", null, {vo:"b2_n3"});
-  await chapterEnd(2, {
-    tinggi:["Data Bantuan Dibuka, Menteri Sosial Dicopot", "Warga mulai menerima bantuan. Namun, Menteri Sosial hanyalah tumbal, dan Meja Bundar tetap utuh."],
-    sedang:["Menteri Sosial Dicopot, Warga Masih Menunggu", "Publik mulai memperhatikanmu, tetapi belum sepenuhnya percaya."],
-    rendah:["Bantuan Cair Sebagian, Suara Wakil Rakyat Muda Tenggelam", "Warga merasa balasanmu hanya menambah ramai kolom komentar."]
-  }, "Harga Naik");
 }
 
 // ---------------------------------------------------------------------
@@ -284,17 +306,6 @@ function bab3Data(){
         {t:"Barangnya ada, hanya tertahan di gudang. Saya ingin tahu siapa yang menahannya.", vo:"b3_q1_sa", d:+10, e:+5, r:`Dimas bersandar ke kursinya. "Wah, ini baru obrolan jujur."`},
         {t:"Harga dunia sedang naik, kita kena imbasnya.", vo:"b3_q1_sb", d:-2, safe:true, r:"Benar sebagian, tetapi pendengar tahu gudang-gudang di Sendaru penuh."},
         {t:"Ini kegagalan pemerintah. Saya malu ikut jadi bagiannya.", vo:"b3_q1_sc", d:+3, e:+8, r:"Pengakuan yang berani, tetapi pendengar menunggu jalan keluarnya."}
-      ]},
-    { q:"Pendengar kami ingin kepastian. Bisakah {P} berjanji harga beras turun bulan depan?", vo:"b3_q2",
-      opts:[
-        {t:"Saya tidak mau menjanjikan hal yang belum bisa saya pastikan.", vo:"b3_q2_a", d:+8, r:"Dimas terdiam sejenak. Jawaban yang jarang ia dengar dari seorang politisi."},
-        {t:"Bisa, bulan depan harga beras pasti turun.", vo:"b3_q2_b", d:+3, promise:"beras_turun", r:"Klip itu dipotong dan dibagikan. Bulan depan, semua orang akan mengecek harga."},
-        {t:"Itu tergantung pemerintah pusat, bukan saya.", vo:"b3_q2_c", d:-6, safe:true, r:`"Lalu untuk apa kami memilih {P}?" tulis seorang pendengar.`}
-      ],
-      sulit:[
-        {t:"Satu hal yang bisa saya janjikan: data stok beras saya buka ke publik.", vo:"b3_q2_sa", d:+10, r:"Janji yang kecil, tetapi bisa ditepati. Dimas mengangguk."},
-        {t:"Saya usahakan sekuat tenaga supaya harga turun bulan depan.", vo:"b3_q2_sb", d:+3, promise:"beras_turun", r:"Terdengar hati-hati, tetapi pendengar tetap mencatatnya sebagai janji."},
-        {t:"Kalau gudang-gudang itu dibuka, harga pasti turun dalam sebulan.", vo:"b3_q2_sc", d:+4, promise:"beras_turun", r:"Logikanya masuk akal, tetapi kata pasti akan ditagih."}
       ]},
     { q:"Bram Satria menjanjikan beras lima ribu rupiah per kilogram. Apa tanggapan {P}?", vo:"b3_q3",
       opts:[
@@ -318,44 +329,7 @@ function bab3Data(){
         {t:"Tidak apa-apa kecewa, asal tetap datang ke tempat pemungutan suara.", vo:"b3_q4_sb", d:+4, r:"Pesan yang baik, meski terdengar seperti iklan layanan masyarakat."},
         {t:"Beri saya lima tahun, dan saya akan membersihkan politik negeri ini.", vo:"b3_q4_sc", d:+2, promise:"politik_bersih", r:"Kedengarannya gagah. Lima tahun lagi, kalimat ini akan diputar ulang."}
       ]},
-    { who:"Dokumen dari Bu Laras", q:"Daftar Izin Impor Beras Tahun Ini. Bagian mana yang paling penting?", silent:true, noTimer:true, node:null,
-      prompt:"Tandai bagian terpenting dari dokumen", hint:"Ketik baris yang menurutmu paling penting, lalu tekan Enter.",
-      opts:[
-        {t:"Pemegang izin tunggal: PT Bundar Pangan Sejahtera, komisaris Haryo Darsono.", d:+6, ev:"impor", r:"Komisaris pemegang izin impor tunggal itu ternyata adik kandung Pak Darsono."},
-        {t:"Kuota impor tahun ini: 2 juta ton.", d:0, r:"Angka yang besar, tetapi belum menunjukkan siapa yang diuntungkan."},
-        {t:"Pelabuhan bongkar muat: Tanjung Sendaru.", d:0, r:"Hanya lokasi. Tidak ada yang janggal."}
-      ],
-      sulit:[
-        {t:"Komisaris PT Bundar Pangan Sejahtera: Haryo Darsono.", d:+6, ev:"impor", r:"Komisaris pemegang izin impor tunggal itu ternyata adik kandung Pak Darsono."},
-        {t:"Izin impor diterbitkan dua hari sebelum harga mulai naik.", d:+3, r:"Waktunya mencurigakan, tetapi siapa yang diuntungkan?"},
-        {t:"Kuota impor dibagi rata untuk tujuh perusahaan.", d:0, r:"Terlihat wajar di atas kertas. Masalahnya ada di baris lain."}
-      ]}
   ];
-}
-async function bab3(){
-  chapterStart(3, "Harga Naik", "pod", "", "siniar");
-  await card({ vo:"bab3_buka", voFrom:2, mark:3, btn:"Masuk ke Studio", parts:[
-    {tag:"h2", text:"Bab 3"}, {tag:"h1", text:"Harga Naik"},
-    {tag:"p", cls:"story", text:"Minyak goreng menghilang dari pasar, dan harga beras naik tiga kali dalam sebulan. Sebuah siniar populer, Ngobrol Jujur, mengundangmu untuk bicara."}],
-    after: brief("Forum Baru", "Siniar Ngobrol Jujur", "Obrolannya panjang dan santai. Waktumu lebih longgar, tetapi ketelitian lebih penting: kalimat yang berantakan terdengar tidak meyakinkan.",
-      ["Meter baru: Janji Tertunda", "Ketelitian lebih penting daripada kecepatan", "Hati-hati dengan janji"]) });
-  await say("Dimas · Ngobrol Jujur", "Selamat datang di Ngobrol Jujur. Hari ini kita kedatangan wakil rakyat yang videonya sedang ramai. Santai saja, ya. Di sini kita bicara jujur.", $("dimas"), {vo:"b3_dimas0", folder:"dimas"});
-  S.rec = true;
-  const F = {...FORUMS.siniar, who:"Dimas · Ngobrol Jujur", node:"dimas", folder:"dimas", hero:"heroPod", prompt:"Jawab pertanyaan Dimas",
-    timeout:{line:"Hening terlalu lama. Dimas tertawa canggung dan mengganti topik.", d:-6}};
-  const data = bab3Data();
-  await runForum(data.slice(0, 2), F);
-  await say("Narator", "Di siniar lain, Bram Satria berjanji harga beras akan menjadi lima ribu rupiah per kilogram. Klipnya ditonton sepuluh juta kali.", null, {vo:"b3_n1"});
-  await say("Bram Satria", "Beras lima ribu! Itu janji saya. Rakyat tidak butuh hitungan, rakyat butuh keberanian!", null, {vo:"b3_bram1", folder:"bram"});
-  await runForum(data.slice(2, 4), F);
-  await say("Narator", "Selepas siaran, sebuah pesan masuk dari Bu Laras.", null, {vo:"b3_n2"});
-  await say("Bu Laras", "Saya mendapat daftar pemegang izin impor beras. Ada satu nama yang mungkin Anda kenal.", null, {vo:"b3_laras1", folder:"laras"});
-  await runForum(data.slice(4), F);
-  await chapterEnd(3, {
-    tinggi:["Menolak Janji Manis, Wakil Rakyat Muda Justru Didengar", "Klipmu dibagikan dengan satu kalimat sederhana: ternyata jujur itu menarik."],
-    sedang:["Beras Lima Ribu atau Jujur Apa Adanya? Publik Terbelah", "Sebagian pendengar memujimu, sebagian lagi lebih percaya pada janji Bram."],
-    rendah:["Bram Satria Melesat, Wakil Rakyat Muda Tertinggal", "Janji manis menyebar lebih cepat daripada penjelasan yang jujur."]
-  }, "Langit Kuning");
 }
 
 // ---------------------------------------------------------------------
@@ -363,40 +337,6 @@ async function bab3(){
 // ---------------------------------------------------------------------
 function bab4Data(){
   return [
-    { q:"Pemerintah daerah menyebut kebakaran ini akibat petani yang membuka lahan dengan cara dibakar. {P} setuju?", vo:"b4_q1",
-      opts:[
-        {t:"Petani kecil tidak mungkin membakar ribuan hektare sendirian.", vo:"b4_q1_a", d:+10, e:+5, r:"Para petani yang menonton mengangguk. Nadia mencatat kata ribuan hektare."},
-        {t:"Kita perlu membina petani agar tidak membakar lahan lagi.", vo:"b4_q1_b", d:-2, safe:true, r:"Tidak salah, tetapi kalimat itu ikut menyalahkan pihak yang paling lemah."},
-        {t:"Itu fitnah, petani kita tidak pernah membakar apa pun.", vo:"b4_q1_c", d:-4, r:"Sebagian petani memang membakar lahan kecil. Kalimatmu mudah dibantah."}
-      ],
-      sulit:[
-        {t:"Sebelum menyalahkan siapa pun, cocokkan dulu titik apinya dengan peta izin lahan.", vo:"b4_q1_sa", d:+10, e:+5, r:"Nadia menurunkan maskernya sejenak. \"Itu pertanyaan yang tepat.\""},
-        {t:"Semua pihak, termasuk petani, harus berhenti membakar lahan.", vo:"b4_q1_sb", d:0, safe:true, r:"Kalimat yang adil di atas kertas, tetapi korporasi besar ikut bersembunyi di baliknya."},
-        {t:"Ini ulah korporasi, petani hanya dijadikan kambing hitam.", vo:"b4_q1_sc", d:+5, e:+12, r:"Warga bersorak. Namun, tanpa data, tuduhan itu mudah dipatahkan."}
-      ]},
-    { who:"Bu Sumi · Warga", node:"sumi", folder:"warga", q:"Anak saya batuk sudah seminggu. Sekolah libur, puskesmas penuh. Kami harus ke mana, {P}?", vo:"b4_q2",
-      opts:[
-        {t:"Mulai malam ini saya buka rumah singgah, lengkap dengan penjernih udara.", vo:"b4_q2_a", d:+10, r:"Bu Sumi menggenggam tanganmu. Malam itu, tiga puluh anak tidur di rumah singgah."},
-        {t:"Gunakan masker dan sebisa mungkin tetap di dalam rumah.", vo:"b4_q2_b", d:-3, safe:true, r:"Saran yang benar, tetapi rumah Bu Sumi pun sudah penuh asap."},
-        {t:"Bersabarlah, hujan pasti segera turun.", vo:"b4_q2_c", d:-8, r:"Bu Sumi memalingkan wajah. Langit masih kuning dan tidak ada tanda hujan."}
-      ],
-      sulit:[
-        {t:"Malam ini saya buka rumah singgah dengan penjernih udara, khusus untuk anak-anak.", vo:"b4_q2_sa", d:+10, r:"Bu Sumi menggenggam tanganmu. Malam itu, tiga puluh anak tidur di rumah singgah."},
-        {t:"Dinas kesehatan sudah saya minta menambah tenaga di puskesmas.", vo:"b4_q2_sb", d:+4, r:"Langkah yang tepat, meski Bu Sumi masih harus mengantre berjam-jam."},
-        {t:"Saya akan membiayai pengobatan semua anak yang sakit di sini.", vo:"b4_q2_sc", d:+3, promise:"biaya_anak", r:"Para ibu menangis lega. Namun, jumlah anak yang sakit terus bertambah."}
-      ]},
-    { who:"Dokumen dari Bu Laras", q:"Citra Satelit Titik Api, Sendaru Barat, Minggu Ini. Bagian mana yang paling penting?", silent:true, noTimer:true, node:null,
-      prompt:"Tandai bagian terpenting dari dokumen", hint:"Ketik baris yang menurutmu paling penting, lalu tekan Enter.",
-      opts:[
-        {t:"Titik api: 287 dari 312 titik berada di konsesi PT Cakrawala Sawit Sendaru.", d:+6, ev:"satelit", r:"Hampir semua titik api berada di lahan satu perusahaan. Pemilik sahamnya anggota Meja Bundar."},
-        {t:"Lahan warga: 25 titik api, sebagian besar berupa kebun kecil.", d:0, r:"Benar, tetapi itu hanya sebagian kecil dari seluruh titik api."},
-        {t:"Arah angin: barat daya, 20 kilometer per jam.", d:0, r:"Berguna untuk memperkirakan arah asap, tetapi tidak menunjukkan siapa pelakunya."}
-      ],
-      sulit:[
-        {t:"Sebanyak 287 dari 312 titik api berada di dalam konsesi PT Cakrawala Sawit Sendaru.", d:+6, ev:"satelit", r:"Hampir semua titik api berada di lahan satu perusahaan. Pemilik sahamnya anggota Meja Bundar."},
-        {t:"Lahan warga mencatat 25 titik api, sebagian besar berupa kebun kecil.", d:0, r:"Benar, tetapi itu hanya sebagian kecil dari seluruh titik api."},
-        {t:"Gambut yang terbakar mencapai 40.000 hektare, dua kali lipat dari tahun lalu.", d:+2, r:"Angka yang mengerikan, tetapi belum menunjukkan siapa pelakunya."}
-      ]},
     { q:"Kalau {P} punya bukti, apakah {P} berani menyebut nama perusahaannya di depan kamera?", vo:"b4_q3",
       opts:[
         {t:"Nama perusahaannya saya serahkan ke penegak hukum, sekalian dengan datanya.", vo:"b4_q3_a", d:+6, e:+5, r:"Langkah yang hati-hati. Datamu kini aman di tangan yang berwenang, tetapi publik belum tahu namanya."},
@@ -419,39 +359,7 @@ function bab4Data(){
         {t:"Kita cari jalan tengah, supaya investasi jalan dan hutan tetap ada.", vo:"b4_q4_sb", d:0, safe:true, r:"Jalan tengah yang terdengar bijak, tetapi asap tidak mengenal jalan tengah."},
         {t:"Kalau investor itu melanggar hukum, izinnya harus dicabut hari ini.", vo:"b4_q4_sc", d:+5, e:+14, r:"Tegas dan tepat sasaran. Di ibu kota, seseorang mencatat namamu."}
       ]},
-    { q:"Apa pesan {P} untuk warga yang malam ini tidur dengan masker?", vo:"b4_q5",
-      opts:[
-        {t:"Kalian tidak sendirian. Asap ini ada pelakunya, dan kita akan kejar dia.", vo:"b4_q5_a", d:+10, r:"Nadia menurunkan kameranya pelan-pelan. Tidak ada yang bersorak, tetapi semua orang mendengar."},
-        {t:"Tetap jaga kesehatan dan perbanyak minum air putih.", vo:"b4_q5_b", d:-2, safe:true, r:"Pesan kesehatan yang baik, tetapi terdengar seperti pengumuman puskesmas."},
-        {t:"Saya berjanji langit kalian akan biru lagi minggu depan.", vo:"b4_q5_c", d:+2, promise:"langit_biru", r:"Warga ingin percaya. Namun, kebakaran gambut bisa berlangsung berbulan-bulan."}
-      ],
-      sulit:[
-        {t:"Bisa bernapas itu hak kalian. Bukan pemberian siapa-siapa.", vo:"b4_q5_sa", d:+10, r:"Nadia menurunkan kameranya pelan-pelan. Tidak ada yang bersorak, tetapi semua orang mendengar."},
-        {t:"Tetap di dalam rumah dulu, jaga anak-anak sampai udaranya membaik.", vo:"b4_q5_sb", d:+2, safe:true, r:"Pesan yang peduli, tetapi tidak menjawab kapan semua ini berakhir."},
-        {t:"Minggu depan langit kalian akan biru lagi, saya jamin.", vo:"b4_q5_sc", d:+2, promise:"langit_biru", r:"Warga ingin percaya. Namun, kebakaran gambut bisa berlangsung berbulan-bulan."}
-      ]}
   ];
-}
-async function bab4(){
-  chapterStart(4, "Langit Kuning", "asap", "", "asap");
-  await card({ vo:"bab4_buka", voFrom:2, mark:4, btn:"Turun ke Lokasi", parts:[
-    {tag:"h2", text:"Bab 4"}, {tag:"h1", text:"Langit Kuning"},
-    {tag:"p", cls:"story", text:"Kemarau panjang. Langit Sendaru Barat berubah kuning, sekolah diliburkan, dan rumah sakit penuh pasien sesak napas. Para pejabat menyebutnya kemarau biasa."}],
-    after: brief("Forum", "Wawancara Cegat di Lokasi Kebakaran", "Mulai bab ini, tidak ada jawaban yang benar-benar salah. Setiap jawaban punya harga.",
-      ["Pilihan lebih bernuansa", "Tekanan Elit makin menentukan", S.relaxed ? "Tanpa batas waktu" : "Ada batas waktu"], false) });
-  await say("Nadia · Wartawan", "Kita bertemu lagi. Kali ini airnya diganti asap.", $("nadiaA"), {vo:"b4_nadia0", folder:"nadia"});
-  S.rec = true;
-  const F = {...FORUMS.cegat, who:"Nadia · Wartawan", node:"nadiaA", folder:"nadia", hero:"heroA", prompt:"Jawab pertanyaan ini"};
-  const data = bab4Data();
-  await runForum(data.slice(0, 2), F);
-  await say("Bu Laras", "Saya mendapat citra satelit titik api minggu ini. Cocokkan dengan peta izin lahan.", null, {vo:"b4_laras1", folder:"laras"});
-  await runForum(data.slice(2), F);
-  await chapterEnd(4, {
-    sebut:["Wakil Rakyat Muda Sebut Nama Pembakar Lahan", "Malam itu namamu menjadi berita utama. Di sebuah ruang rapat, Meja Bundar memutuskan untuk membalas."],
-    tinggi:["Di Tengah Asap, Satu Suara Menolak Menyalahkan Petani", "Warga mendengarmu. Namun, nama pembakar lahan masih tersimpan rapi di laci Meja Bundar."],
-    sedang:["Asap Belum Hilang, Jawaban Belum Jelas", "Publik masih menunggu keberanianmu."],
-    rendah:["Kabut Asap, Kabut Janji", "Warga mulai lelah mendengar kalimat yang aman."]
-  }, "Fitnah", S.flags.sebut ? "sebut" : null);
 }
 
 // ---------------------------------------------------------------------
@@ -491,17 +399,6 @@ function bab5Data(){
         {t:"Demi kebaikan bersama, saya bersedia mundur sementara.", vo:"b5_q2_sb", d:-4, safe:true, r:"Terdengar dewasa, tetapi pendengung menyebutnya pengakuan bersalah."},
         {t:"Pak Darsono juga harus diperiksa soal impor beras.", vo:"b5_q2_sc", d:+4, e:+15, r:"Kamu menyerang balik. Meja Bundar kini benar-benar menganggapmu ancaman."}
       ]},
-    { who:"@infoterkini.id", hot:true, q:"TERKINI: keluarga {P} ternyata pemilik tambang ilegal di Sendaru Timur!", vo:"b5_q3",
-      opts:[
-        {t:"Itu hoaks. Ini data harta keluarga saya, silakan diperiksa.", vo:"b5_q3_a", d:+10, r:"Data yang terbuka membuat hoaks itu kehilangan tenaga."},
-        {t:"Keluarga saya tidak ada hubungannya dengan politik.", vo:"b5_q3_b", d:-2, r:"Benar, tetapi tanpa bantahan yang jelas, hoaks itu terus menyebar."},
-        {t:"Penyebar hoaks ini akan saya penjarakan semua!", vo:"b5_q3_c", d:-6, r:"Ancaman itu dijadikan bahan olok-olok: wakil rakyat antikritik."}
-      ],
-      sulit:[
-        {t:"Ini laporan harta keluarga saya. Siapa saja boleh memeriksanya.", vo:"b5_q3_sa", d:+10, r:"Data yang terbuka membuat hoaks itu kehilangan tenaga."},
-        {t:"Mohon jangan libatkan keluarga saya dalam urusan politik.", vo:"b5_q3_sb", d:0, r:"Permintaan yang manusiawi, tetapi hoaksnya tetap beredar."},
-        {t:"Akun penyebar hoaks ini sudah saya laporkan ke polisi siber.", vo:"b5_q3_sc", d:+2, r:"Langkah yang sah, tetapi warganet menyebutmu membungkam kritik."}
-      ]},
     { who:"@ibu_muara", q:"Saya warga Muara yang dulu {P} temani di tepi sungai. Saya masih mau percaya. Tolong katakan yang sebenarnya.", vo:"b5_q4",
       opts:[
         {t:"Terima kasih sudah percaya. Uang itu tidak saya terima, nanti juga terbukti.", vo:"b5_q4_a", d:+10, r:"Balasanmu dibagikan oleh warga Muara. Mereka masih ingat malam banjir itu."},
@@ -525,33 +422,6 @@ function bab5Data(){
         {t:"Para pendengung itu dibayar Meja Bundar, nanti saya buktikan.", vo:"b5_q5_sc", d:+3, e:+15, promise:"bukti_pendengung", r:"Tuduhan yang besar. Kini kamu harus membuktikannya."}
       ]}
   ];
-}
-async function bab5(){
-  chapterStart(5, "Fitnah", "kamar", "feedOn hot", "fitnah");
-  await card({ vo:"bab5_buka", voFrom:2, mark:5, btn:"Hadapi Kolom Komentar", parts:[
-    {tag:"h2", text:"Bab 5"}, {tag:"h1", text:"Fitnah"},
-    {tag:"p", cls:"story", text:"Pukul dua dini hari, sebuah video beredar: kamu terlihat menerima amplop tebal di sebuah parkiran. Dalam satu jam, tagar #WakilRakyatPalsu menduduki puncak percakapan."}],
-    after: brief("Mekanik Baru", "Salah Ketik Jadi Plintiran", "Komentar datang lebih cepat dan waktumu lebih sempit. Mulai bab ini, kalimat yang salah ketik bisa dipotong dan dijadikan judul berita yang menjatuhkanmu.",
-      [S.relaxed ? "Tanpa batas waktu" : "Waktu lebih ketat", "Teliti setiap huruf", "Hoaks menyebar cepat"]) });
-  await say("Narator", "Ponselmu tidak berhenti bergetar. Ribuan akun baru dengan foto profil kosong menyerbu kolom komentarmu.", null, {vo:"b5_n1"});
-  feedNoise(NOISE, true);
-  S.rec = true;
-  const F = {...FORUMS.sosmed2, who:"Warganet", folder:"warga", hero:"heroK", prompt:"Balas sebelum hoaksnya menyebar",
-    timeout:{line:"Kamu terlambat membalas. Potongan video itu sudah dibagikan seratus ribu kali.", d:-8}};
-  const data = bab5Data();
-  await runForum(data.slice(0, 3), F);
-  await say("Nadia · Pesan Pribadi", "Saya sedang memeriksa video itu. Ada yang aneh dengan bayangannya. Jangan bicara sembarangan dulu.", null, {vo:"b5_nadia1", folder:"nadia"});
-  await runForum(data.slice(3, 4), F);
-  await say("Nadia · Pesan Pribadi", "Sudah saya pastikan. Video itu hasil sunting: bayanganmu jatuh ke kiri, tetapi bayangan mobil di sebelahmu jatuh ke kanan. Rekaman aslinya sudah saya dapatkan.", null, {vo:"b5_nadia2", folder:"nadia"});
-  S.ev.add("video");
-  feedNoise(null, false);
-  addPost("@nadia.prameswari", "Rekaman asli dari parkiran itu. Tidak ada amplop. Silakan bandingkan sendiri.");
-  await runForum(data.slice(4), F);
-  await chapterEnd(5, {
-    tinggi:["Video Fitnah Terbongkar, Dukungan Justru Menguat", "Rekaman asli dari Nadia menyebar lebih cepat daripada fitnahnya. Meja Bundar mulai cemas."],
-    sedang:["Video Terbukti Palsu, tetapi Keraguan Tersisa", "Sebagian warga sudah telanjur percaya pada potongan pertama."],
-    rendah:["Fitnah Terbantah, Nama Telanjur Tercoreng", "Kalimat-kalimatmu yang berantakan ikut dijadikan bahan olok-olok."]
-  }, "Debat Nasional");
 }
 
 // ---------------------------------------------------------------------
@@ -635,10 +505,10 @@ function bab6Data(){
       ]}
   ];
 }
-async function bab6(){
-  chapterStart(6, "Debat Nasional", "tv", "", "debat");
-  await card({ vo:"bab6_buka", voFrom:2, mark:6, btn:"Masuk ke Studio", parts:[
-    {tag:"h2", text:"Bab 6"}, {tag:"h1", text:"Debat Nasional"},
+async function bab4(){
+  chapterStart(4, "Debat Nasional", "tv", "", "debat");
+  await card({ vo:"bab6_buka", voFrom:2, mark:4, btn:"Masuk ke Studio", parts:[
+    {tag:"h2", text:"Bab 4"}, {tag:"h1", text:"Debat Nasional"},
     {tag:"p", cls:"story", text:"Dewan diam-diam membahas revisi undang-undang yang melemahkan Lembaga Antikorupsi. Di laut utara Sendaru, pagar bambu sepanjang 30 kilometer muncul lengkap dengan sertifikat tanahnya. Kamu diundang ke debat nasional."}],
     after: brief("Forum Baru", "Debat Televisi", "Lawan debatmu akan memotong jika kamu terlalu lama menjawab. Bukti dari bab-bab sebelumnya membuka pilihan jawaban keempat yang paling kuat.",
       ["Mekanik baru: jawaban dari bukti", `Bukti terkumpul: ${S.ev.size}`, S.relaxed ? "Tanpa batas waktu" : "Disela jika terlambat"]) });
@@ -652,11 +522,11 @@ async function bab6(){
   await say("Rina · Moderator", "Selamat malam, Sendaru. Malam ini kita membahas revisi Undang-Undang Lembaga Antikorupsi. Waktu menjawab terbatas.", $("rina"), {vo:"b6_rina0", folder:"moderator"});
   await runForum(data.slice(1), F);
   await say("Narator", "Malam itu juga, ribuan mahasiswa berkumpul di depan gedung dewan.", null, {vo:"b6_n1"});
-  await chapterEnd(6, {
+  await chapterEnd(4, {
     tinggi:["Debat Semalam Memicu Gelombang Mahasiswa", "Ribuan mahasiswa turun ke jalan menolak revisi. Di ruang kerjanya, Pak Darsono mulai panik."],
     sedang:["Debat Panas, Revisi Tetap Dibahas", "Sebagian penonton memihakmu. Mahasiswa mulai berkumpul, meski belum banyak."],
     rendah:["Juru Bicara Koalisi Unggul dalam Debat", "Hendra menang di layar kaca. Namun, beberapa mahasiswa tetap mencatat kata-katamu."]
-  }, "Sidang Terbuka");
+  }, "Sidang Terbuka", null, "bab6");
 }
 
 // ---------------------------------------------------------------------
@@ -735,10 +605,10 @@ function bab7Pers(){
       {t:"Kalau saya dicopot, rakyat yang akan turun ke jalan.", vo:"b7_q5_sc", d:+2, e:+8, r:"Kalimat itu dipotong dan disebut sebagai ancaman menghasut massa."}
     ]};
 }
-async function bab7(){
-  chapterStart(7, "Sidang Terbuka", "sidang", "", "sidang");
-  await card({ vo:"bab7_buka", voFrom:2, mark:7, btn:"Masuk ke Ruang Sidang", parts:[
-    {tag:"h2", text:"Bab 7"}, {tag:"h1", text:"Sidang Terbuka"},
+async function bab5(){
+  chapterStart(5, "Sidang Terbuka", "sidang", "", "sidang");
+  await card({ vo:"bab7_buka", voFrom:2, mark:5, btn:"Masuk ke Ruang Sidang", parts:[
+    {tag:"h2", text:"Bab 5"}, {tag:"h1", text:"Sidang Terbuka"},
     {tag:"p", cls:"story", text:"Rapat paripurna. Semua bukti yang kamu kumpulkan ada di dalam satu map: tanggul, bantuan sosial, impor beras, kebakaran lahan, dan pagar laut. Hari ini kamu membacanya di depan seluruh dewan."}],
     after: brief("Forum Baru", "Sidang Dewan", "Kalimatnya panjang dan setiap kata dicatat dalam risalah. Anggota dewan lain akan bersorak dan memotong. Bukti yang kamu kumpulkan membuka jawaban terkuat.",
       ["Kalimat lebih panjang", `Bukti terkumpul: ${S.ev.size}`, S.relaxed ? "Tanpa batas waktu" : "Disela jika terlambat"]) });
@@ -766,11 +636,11 @@ async function bab7(){
   gavel(2);
   await say("Ketua Sidang", "Pimpinan menerima mosi dari fraksi koalisi: pemakzulan terhadap Saudara atas tuduhan merekayasa bukti. Rapat diskors.", $("ketua"), {vo:"b7_ketua_mosi", folder:"ketua"});
   await runForum([bab7Pers()], {...F, timeout:undefined});
-  await chapterEnd(7, {
+  await chapterEnd(5, {
     tinggi:["Bukti Dibacakan, Wakil Rakyat Muda Justru Dimakzulkan", "Publik marah. Malam ini, ribuan orang berkumpul di depan gedung dewan."],
     sedang:["Mosi Pemakzulan Diajukan, Publik Terbelah", "Sebagian percaya pada buktimu, sebagian lagi pada tuduhan rekayasa."],
     rendah:["Dituduh Merekayasa Bukti, Wakil Rakyat Muda Terpojok", "Hanya sedikit yang membelamu. Besok pagi, surat penangkapan akan terbit."]
-  }, "Suara Terakhir");
+  }, "Suara Terakhir", null, "bab7");
 }
 
 // ---------------------------------------------------------------------
@@ -870,10 +740,10 @@ const B8_PENUTUP = { who:"Nadia · Wartawan", node:"nadiaSi", folder:"nadia", pr
     {t:"Saya pamit. Negeri ini saya titipkan ke kalian.", vo:"b8_akhir_sb", d:+5, r:"Perpisahan yang hangat. Banyak yang menangis di depan layar."},
     {t:"Jangan percaya siapa pun, termasuk saya, kecuali pada bukti.", vo:"b8_akhir_sc", d:+6, r:"Pesan yang aneh untuk sebuah perpisahan, tetapi para mahasiswa menuliskannya di spanduk."}
   ]};
-async function bab8(){
-  chapterStart(8, "Suara Terakhir", "siaran", "", "siaran");
-  await card({ vo:"bab8_buka", voFrom:2, mark:8, btn:"Nyalakan Kamera", parts:[
-    {tag:"h2", text:"Bab 8"}, {tag:"h1", text:"Suara Terakhir"},
+async function bab6(){
+  chapterStart(6, "Suara Terakhir", "siaran", "", "siaran");
+  await card({ vo:"bab8_buka", voFrom:2, mark:6, btn:"Nyalakan Kamera", parts:[
+    {tag:"h2", text:"Bab 6"}, {tag:"h1", text:"Suara Terakhir"},
     {tag:"p", cls:"story", text:"Surat penangkapanmu terbit besok pagi. Malam ini, Nadia berhasil mendapatkan satu siaran langsung nasional. Di luar, ribuan orang menunggu suaramu."}],
     after: brief("Bab Terakhir", "Siaran Langsung Nasional", "Semua forum bercampur dalam satu malam: pidato, kolom komentar, telepon warga, dan satu panggilan yang tidak kamu duga. Janji-janji lamamu akan ditagih.",
       ["Pidato harus tepat", "Janji akan ditagih", "Setiap kata menentukan akhir cerita"]) });
@@ -901,12 +771,12 @@ async function bab8(){
   }
   if (S.sold){
     await say("Narator", "Siaran terputus. Layar di seluruh Sendaru berubah hitam.", null, {vo:"b8_n_putus"});
-    S.done.add(8);
+    S.done.add(6);
     return;
   }
   await runForum([B8_PENUTUP], F);
   S.rec = false;
-  S.done.add(8);
+  S.done.add(6);
 }
 
 // ---------------------------------------------------------------------
@@ -986,13 +856,13 @@ function bab9Putusan(){
       {t:"Saya terima, dan saya siap menyesuaikan diri dengan arahan dewan.", vo:"b9_q6_sc", d:-4, safe:true, flag:"vp_pasrah", r:"Ketua mengetuk palu. Kursi koalisi saling melempar senyum."}
     ]};
 }
-async function bab9(){
+async function bab7(){
   // only the best path reaches this chapter; every other path ends after the broadcast
   if (endingKey() !== "fajar") return;
-  chapterStart(9, "Suara Kedua", "sidang", "", "sidang");
+  chapterStart(7, "Suara Kedua", "sidang", "", "sidang");
   $("darsonoS").style.visibility = "hidden"; // he is in custody on this path
-  await card({ vo:"bab9_buka", voFrom:2, mark:9, btn:"Masuk ke Ruang Sidang", parts:[
-    {tag:"h2", text:"Bab 9"}, {tag:"h1", text:"Suara Kedua"},
+  await card({ vo:"bab9_buka", voFrom:2, mark:7, btn:"Masuk ke Ruang Sidang", parts:[
+    {tag:"h2", text:"Bab 7"}, {tag:"h1", text:"Suara Kedua"},
     {tag:"p", cls:"story", text:"Tiga bulan setelah siaran itu, surat penangkapanmu dibatalkan dan Pak Darsono ditahan. Pagi ini, Wakil Presiden Sendaru mengundurkan diri setelah namanya muncul dalam berkas Meja Bundar. Dewan harus memilih penggantinya, dan satu nama terus disebut di jalanan: namamu."}],
     after: brief("Bab Tambahan", "Uji Publik Calon Wakil Presiden", "Dewan mengujimu di depan kamera. Setiap pihak menawarkan dukungan, dan setiap dukungan punya harga. Jawaban yang lunak memuluskan jalanmu, tetapi menentukan kursi macam apa yang kamu dapat.",
       ["Kalimat lebih panjang", "Dukungan punya harga", "Keputusan terakhir di tanganmu"], false) });
@@ -1075,4 +945,4 @@ async function ending(){
   location.reload();
 }
 
-const CHAPTERS = [bab1, bab2, bab3, bab4, bab5, bab6, bab7, bab8, bab9];
+const CHAPTERS = [bab1, bab2, bab3, bab4, bab5, bab6, bab7];

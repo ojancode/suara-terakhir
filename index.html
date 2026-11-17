@@ -475,6 +475,10 @@ body.menu #world{animation:drift 26s ease-in-out infinite alternate}
 .ticker .track{flex:1;overflow:hidden;position:relative}
 .ticker .run{position:absolute;top:0;bottom:0;display:flex;align-items:center;white-space:nowrap;animation:marquee 60s linear infinite;font-size:14px;color:#d8d4cb}
 .ticker .run span{padding:0 22px;border-right:1px solid #3a3f4c}
+/* in-game strip: top of the scene, so it never covers the speech bubble */
+#newsBar{top:0;bottom:auto;height:30px;z-index:6}
+#newsBar .tag{padding:0 12px;font-size:11px}
+#newsBar .run{font-size:13px}
 @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .credit{position:absolute;bottom:48px;left:0;right:0;font-size:11px;color:#8a8f9c;text-align:center;padding:0 16px}
 @media (prefers-reduced-motion:reduce){body.menu #world,.ticker .run,.live .dot{animation:none}.menu-body > *{animation-duration:.01s}}
@@ -765,6 +769,7 @@ html[lang=en] .overlay.chapter .headline::before{content:"SENDARU NEWS \00B7  SP
   <div id="vig" aria-hidden="true"></div>
   <div id="haze" aria-hidden="true"></div>
   <div id="feed" aria-label="Kolom komentar"><div class="feed-head"><span class="dot"></span>Kolom komentar</div><div id="feedList" aria-live="polite"></div></div>
+  <div class="ticker hidden" id="newsBar" aria-hidden="true"><span class="tag" id="newsTag"></span><div class="track"><div class="run" id="newsRun"></div></div></div>
   <div id="bubble"><small id="who"></small><span id="say"></span></div>
 </div>
 
@@ -896,7 +901,7 @@ html[lang=en] .overlay.chapter .headline::before{content:"SENDARU NEWS \00B7  SP
     </div></div>
     <div class="starts"><button id="startBtn" class="cta">Mulai Bermain <kbd>Enter</kbd></button><button id="contBtn" class="cta ghost hidden"></button><button id="boardBtn" class="cta ghost">Papan Skor</button></div>
   </div>
-  <p class="credit">Prolog, 8 bab, dan satu bab tersembunyi · Musik: Kevin MacLeod (incompetech.com), lisensi CC BY 4.0</p>
+  <p class="credit">Prolog, 6 bab, dan satu bab tersembunyi · Musik: Kevin MacLeod (incompetech.com), lisensi CC BY 4.0</p>
   <div class="ticker" aria-hidden="true"><span class="tag">BERITA TERKINI</span><div class="track"><div class="run" id="tickerRun"></div></div></div>
 </div>
 
@@ -1209,8 +1214,8 @@ async function music(name){
   let stopMusic;
   const stopAmb = AMBIENCE[name] ? AMBIENCE[name](g) : () => {};
   // a location without its own file borrows one of the existing tracks (drop audio/bgm/<name>.mp3 in to override)
-  let url = `audio/bgm/${name}.m4a`;
-  if (!(await hasFile(url)) && BGM_ALIAS[name]) url = `audio/bgm/${BGM_ALIAS[name]}.m4a`;
+  let url = `audio/bgm/${name}.mp3`;
+  if (!(await hasFile(url)) && BGM_ALIAS[name]) url = `audio/bgm/${BGM_ALIAS[name]}.mp3`;
   if (A.curName !== name){ stopAmb(); g.disconnect(); return; } // another track was requested while checking files
   if (await hasFile(url)){
     const el = new Audio(url); el.loop = true;
@@ -1398,7 +1403,7 @@ function flashes(n = 3){
     f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); shutter();
   }, i * 150 + Math.random() * 70);
 }
-// extra: state classes such as "feedOn" (social-media phone) or "hot" (Bab 5 red tint)
+// extra: state classes such as "feedOn" (social-media phone) or "hot" (Bab 3 red tint)
 function setScene(name, extra = ""){ $("scene").className = (name + " " + extra).trim(); }
 
 // ---- stage entrance and exit ----
@@ -1595,7 +1600,7 @@ $("card").addEventListener("submit", async e => {
 });
 
 // ---------- leaderboard (Base44 entity Skor) ----------
-// Only a run that played chapters 1-8 to the end is sent (Bab 9 is hidden, so it is optional).
+// Only a run that played chapters 1-6 to the end is sent (Bab 7 is hidden, so it is optional).
 // The API accepts any anonymous write, so every row is re-checked on read: out-of-range values or a
 // score that does not match its own fields are dropped, and every field is escaped before display.
 const SKOR_URL = SARAN_URL.replace(/Saran$/, "Skor");
@@ -1608,7 +1613,7 @@ const AKHIR_EN = { "Kursi Kedua":"The Second Seat", "Fajar Sendaru":"Sendaru Daw
 const scoreOf = r => Math.round((r.kepercayaan * 10 + LB_BONUS[r.akhir] + r.akurasi * 3) * LB_MODE[r.mode]);
 const LB_KASAR = /anjing|anjg|babi|bangsat|bajingan|kontol|memek|ngentot|entot|jancok|jancuk|goblok|tolol|pepek|kampret|asu\b|tai\b|peler|fuck|shit|bitch|cunt|whore|slut|asshole|nigg|faggot|retard/i;
 const escS = s => String(s).replace(/[<>&"']/g, c => ({"<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;", "'":"&#39;"}[c]));
-const finishedAll = () => [1, 2, 3, 4, 5, 6, 7, 8].every(n => S.done.has(n));
+const finishedAll = () => [1, 2, 3, 4, 5, 6].every(n => S.done.has(n));
 let lbMine = null; // this run's row, highlighted on the board
 // called from ending(); returns {row, sent: Promise<string status>} or null when the run does not qualify
 function submitScore(akhir){
@@ -2019,7 +2024,7 @@ async function question(item, F){
   } else {
     o = list[order[r.idx]];
     delta = o.d || 0; de = o.e || 0;
-    // sloppy typing weakens a good answer; from Bab 5 the media also twists the typo into a headline
+    // sloppy typing weakens a good answer; from the smear scene (Bab 3) the media also twists the typo into a headline
     const sloppy = r.acc < (F.sloppyAt || .85);
     if (sloppy && delta > 0) delta = Math.round(delta / 2);
     if (sloppy && F.twist){ delta -= 5; twisted = S.typed; }
@@ -2060,7 +2065,7 @@ async function runForum(items, F){
   for (const item of items) await question(item, F);
 }
 
-// Speech lines that must be typed exactly (Prolog oath, Bab 8 opening). Returns {chars, secs}.
+// Speech lines that must be typed exactly (Prolog oath, Bab 6 opening). Returns {chars, secs}.
 async function speech(lines, heroId, prompt){
   let chars = 0, secs = 0;
   S.tourNext = () => tour("sumpah", TOUR_STEPS.sumpah);
@@ -2084,7 +2089,7 @@ function addPost(who, text, kind = ""){
   while (f.children.length > 7) f.lastChild.remove();
 }
 let noiseId = null;
-// a stream of hostile posts in the background (Bab 5)
+// a stream of hostile posts in the background (Bab 3)
 function feedNoise(pool, on){
   clearInterval(noiseId);
   if (on) noiseId = setInterval(() => { const [h, t] = pick(pool); addPost(h, t, "hot"); }, 2600);
@@ -2096,6 +2101,7 @@ function chapterStart(n, title, scene, extra, track){
   $("bubble").classList.remove("show");
   $("world").classList.remove("zoom");
   $("feedList").innerHTML = "";
+  berita(null);
   setScene(scene, extra); music(track);
   stageWait();
   // saved before the cool-down, so continuing a chapter applies it only once
@@ -2103,7 +2109,26 @@ function chapterStart(n, title, scene, extra, track){
   // the elite cool down a little between chapters
   if (n >= 3) setElite(S.elite - 10);
   if (n >= 2) unlock("eliteBox");
-  if (n >= 3) unlock("promBox");
+  if (n >= 2) unlock("promBox");
+}
+// BERITA TERKINI strip inside the scene (a chapter start hides it). Lines run twice for a seamless loop.
+function berita(lines){
+  const bar = $("newsBar");
+  if (!lines){ bar.classList.add("hidden"); return; }
+  $("newsTag").textContent = _t("BERITA TERKINI", "BREAKING NEWS");
+  $("newsRun").innerHTML = [...lines, ...lines].map(h => `<span>${h}</span>`).join("");
+  bar.classList.remove("hidden");
+}
+// Second backdrop inside one chapter: the player walks out, the new scene is set, and the next card() walks everyone in.
+// Always follow it with a card(), because stageWait() hides the cast until a card closes.
+async function switchScene(scene, extra, track){
+  await stageExit();
+  $("bubble").classList.remove("show");
+  $("world").classList.remove("zoom");
+  $("feedList").innerHTML = "";
+  berita(null);
+  setScene(scene, extra); music(track);
+  stageWait();
 }
 function metersHTML(){
   let h = `<div class="meters-end"><div class="mtr">${_t("Kepercayaan", "Trust")}<span class="meter"><i style="width:${S.trust}%"></i></span><b>${S.trust}</b></div>`;
@@ -2117,7 +2142,7 @@ function ledgerHTML(){
   return items.length ? `<ul class="ledger">${items.join("")}</ul>` : "";
 }
 // Chapter-end newspaper card. ends: {tinggi, sedang, rendah} -> [headline, sub]; the vo id is bab<n>_akhir_<key>.
-async function chapterEnd(n, ends, next, forceKey){
+async function chapterEnd(n, ends, next, forceKey, voBase = "bab" + n){
   S.rec = false;
   $("world").classList.remove("zoom");
   $("bubble").classList.remove("show");
@@ -2128,13 +2153,13 @@ async function chapterEnd(n, ends, next, forceKey){
   music(S.trust >= 45 ? "akhir_baik" : "akhir_buruk");
   const parts = [{tag:"h2", text:_t(`Bab ${n} Selesai`, `Chapter ${n} Complete`)}, {tag:"div", cls:"headline", text:headline}, {tag:"p", cls:"story", text:sub}];
   if (next) parts.push({tag:"p", cls:"next", text:_t(`Bersambung ke Bab ${n + 1}: ${next}.`, `Continued in Chapter ${n + 1}: ${next}.`)});
-  await card({ vo:`bab${n}_akhir_${key}`, mark:n, btn: next ? _t(`Lanjut ke Bab ${n + 1}`, `Go to Chapter ${n + 1}`) : _t("Lanjut", "Continue"), parts,
+  await card({ vo:`${voBase}_akhir_${key}`, mark:n, btn: next ? _t(`Lanjut ke Bab ${n + 1}`, `Go to Chapter ${n + 1}`) : _t("Lanjut", "Continue"), parts,
     after: metersHTML() + ledgerHTML() + statsHTML(ST, _t(`Statistik mengetik Bab ${n}`, `Typing stats, Chapter ${n}`)) });
   statsReset();
 }
 
 // ---- checkpoint: the game is long, so each chapter start is saved in this browser ----
-const SAVE_KEY = "suara-terakhir-simpanan";
+const SAVE_KEY = "suara-terakhir-simpanan-2"; // -2: the chapters were renumbered (8 became 6), so old checkpoints no longer fit
 function saveGame(n){
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({ n, name:S.name, sapa:S.sapa, mode:S.mode, cps:S.cps, trust:S.trust, elite:S.elite,
@@ -2299,7 +2324,7 @@ if (LANG === "en"){
     [".mode:nth-child(2) small", "Three answers, generous timing."],
     [".mode:nth-child(3) b", "Hard"], [".mode:nth-child(3) small", "Tricky answers, tighter timing."],
     ["#startBtn", "Start Playing <kbd>Enter</kbd>"], ["#boardBtn", "Leaderboard"],
-    ["#title .credit", "Prologue, 8 chapters, and one hidden chapter · Music: Kevin MacLeod (incompetech.com), licensed under CC BY 4.0"],
+    ["#title .credit", "Prologue, 6 chapters, and one hidden chapter · Music: Kevin MacLeod (incompetech.com), licensed under CC BY 4.0"],
     ["#title .ticker .tag", "BREAKING NEWS"],
     ["#nameCard .id-head small", "Republic of Sendaru"], ["#idTitle", "House Member ID Card"],
     ["label[for=nameInput]", "Full name"], ["#nameInput", "Type your name", "placeholder"],
