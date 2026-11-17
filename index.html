@@ -2968,8 +2968,10 @@ $("tickerRun").innerHTML = [...HEADLINES, ...HEADLINES].map(h => `<span>${h}</sp
 document.addEventListener("keydown", e => {
   if ($("title").classList.contains("hidden")) return;
   const r = document.querySelector(`input[name=mode][value=${({"1":"santai","2":"normal","3":"sulit"})[e.key]}]`);
-  if (r){ r.checked = true; r.focus(); }
+  if (r){ r.click(); r.focus(); }
 });
+// picking a difficulty (click, arrow keys or 1/2/3) sounds like a button press, even when it was already selected
+document.querySelectorAll("input[name=mode]").forEach(r => r.addEventListener("click", () => { audioInit(); A.ctx.resume(); buttonPress(); }));
 function askReset(){
   const box = $("confirmBox"); box.classList.remove("hidden"); $("confirmNo").focus();
   const close = () => { box.classList.add("hidden"); document.removeEventListener("keydown", onKey, true); typer.focus(); };
