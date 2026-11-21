@@ -221,7 +221,7 @@
 
 /* Bab 2 posko at dusk */
 #scene.posko{background:#1a1a26}
-.ps-sky{left:-40%;right:-40%;top:-40%;bottom:-10%;background:linear-gradient(#1a2033,#3a3346 34%,#7a4c3c 62%,#b56a3c 78%,#5a3a2e)}
+.ps-sky{left:-40%;right:-40%;top:-40%;bottom:-10%;background:linear-gradient(#1a2033,#3a3346 34%,#7a4c3c 62%,#b56a3c 78%,#5a3a2e);background:linear-gradient(in oklch,#1a2033,#3a3346 34%,#7a4c3c 62%,#b56a3c 78%,#5a3a2e)}
 .ps-sun{left:62%;bottom:30%;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,#ffcf8a,#f29a4a 45%,rgba(242,154,74,0) 70%);opacity:.85}
 .ps-hills{left:-40%;right:-40%;bottom:26%;height:18%;background:radial-gradient(ellipse 30% 90% at 20% 100%,#2c2430 68%,transparent 70%),radial-gradient(ellipse 36% 100% at 55% 100%,#2a2230 68%,transparent 70%),radial-gradient(ellipse 30% 85% at 86% 100%,#2e2632 68%,transparent 70%)}
 .ps-roofs{left:-30%;right:-30%;bottom:26%;height:44px;background:#251e26;
