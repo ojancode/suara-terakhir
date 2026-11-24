@@ -2187,7 +2187,14 @@ function saveGame(n){
   } catch (e) {}
 }
 function loadGame(){
-  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return d && d.n >= 1 && d.n <= CHAPTERS.length ? d : null; } catch (e) { return null; }
+  // the save is user-editable, so it is checked like any other input before it is used or sent to the leaderboard
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+    const ok = d && Number.isInteger(d.n) && d.n >= 1 && d.n <= CHAPTERS.length
+      && typeof d.name === "string" && d.name.length <= 24 && NAME_RE.test(d.name)
+      && d.mode in LB_MODE && typeof d.trust === "number" && d.trust >= 0 && d.trust <= 100;
+    return ok ? d : null;
+  } catch (e) { return null; }
 }
 function clearSave(){ try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
 
