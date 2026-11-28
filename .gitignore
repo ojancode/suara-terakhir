@@ -1,0 +1,5 @@
+# secrets must never be committed
+.env
+.env.*
+*.pem
+*.key
